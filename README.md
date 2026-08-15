@@ -15,6 +15,10 @@
   </p>
 
   <p>
+    <a href="./README_EN.md">English</a>
+  </p>
+
+  <p>
     <a href="#快速开始">快速开始</a> ·
     <a href="#系统架构">系统架构</a> ·
     <a href="#核心特性">核心特性</a> ·
