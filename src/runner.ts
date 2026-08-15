@@ -141,6 +141,15 @@ function capMinutesFor(ch: ChallengeInfo, cfg: RunnerConfig): number {
   return Math.min(cfg.taskCapPerFlagMin * ch.flag_count, cfg.taskMinutes * 0.5)
 }
 
+/** 选题顺序:多 flag 题(多阶段链路,链路最长)排最前吃满全程时间,按 flag 数/分值降序;
+ *  单 flag 题保持原 level/分数升序。首轮与后续 pass 共用同一比较器 */
+export function challengeOrder(a: ChallengeInfo, b: ChallengeInfo): number {
+  const am = a.flag_count > 1 ? 0 : 1, bm = b.flag_count > 1 ? 0 : 1
+  if (am !== bm) return am - bm
+  if (am === 0) return b.flag_count - a.flag_count || b.total_score - a.total_score
+  return coerceLevel(a.level) - coerceLevel(b.level) || a.total_score - b.total_score
+}
+
 const SYSTEM_PROMPT = `你是自主渗透测试 agent，在 TSec Benchmark 靶场中解题拿 flag。
 
 工作方式（ReAct 循环）：
@@ -316,14 +325,7 @@ export async function startRun(config: RunnerConfig, hooks: RunnerHooks, project
     }
     todo = (listRes.data as ChallengeInfo[])
       .filter(c => !c.is_completed)
-      // 多 flag 题(多阶段链路,链路最长)排最前吃满全程时间,按 flag 数/分值降序;
-      // 单 flag 题保持原 level/分数升序
-      .sort((a, b) => {
-        const am = a.flag_count > 1 ? 0 : 1, bm = b.flag_count > 1 ? 0 : 1
-        if (am !== bm) return am - bm
-        if (am === 0) return b.flag_count - a.flag_count || b.total_score - a.total_score
-        return coerceLevel(a.level) - coerceLevel(b.level) || a.total_score - b.total_score
-      })
+      .sort(challengeOrder)
   }
 
   // 拿到题目清单后才建状态库——预检/拉取失败不产生空跑目录
@@ -337,8 +339,10 @@ export async function startRun(config: RunnerConfig, hooks: RunnerHooks, project
   let tokensUsed = 0
   const tokensByChallenge: Record<string, number> = {}
   const toolCallCounts: Record<string, number> = {} // 工具调用统计(工具集页面数据源)
-  const solved: string[] = []
-  const abandoned: string[] = []
+  /** 有人值守时被人类决策跳过的题:本场所有 pass 都不再重试 */
+  const humanSkipped = new Set<string>()
+  /** 本轮 pass 成功启动容器的题数(平台故障时防止多 pass 空转) */
+  let passStarted = 0
 
   const raiseAlert = async (code: string, message: string, rounds: number): Promise<'continue' | 'skip'> => {
     const alert = { id: `alert-${++alertSeq}`, challenge: code, message }
@@ -353,10 +357,11 @@ export async function startRun(config: RunnerConfig, hooks: RunnerHooks, project
     return decision
   }
 
-  /** 处理一道题的完整生命周期:start → recon 轮 → ReAct 轮 → finally close(target 模式无平台交互) */
-  const processChallenge = async (ch: ChallengeInfo, workerId: number): Promise<void> => {
+  /** 处理一道题的一次尝试:start → recon 轮(首次且零 findings 时) → ReAct 轮 → finally close(target 模式无平台交互)。
+   *  attempt>1 时继承此前 findings/hint(知识有效),清空过期战果(旧容器已销毁),按平台记录恢复 flag 进度 */
+  const processChallenge = async (ch: ChallengeInfo, workerId: number, attempt: number): Promise<void> => {
     const wlog = (text: string) => log(`[w${workerId}] ${text}`)
-    wlog(`=== ${ch.unique_code} (${ch.total_score}分, ${ch.flag_count} flag, ${ch.difficulty}) ===`)
+    wlog(`=== ${ch.unique_code} (${ch.total_score}分, ${ch.flag_count} flag, ${ch.difficulty}) 第 ${attempt} 次尝试 ===`)
     wlog(`${ch.description ?? '(无描述)'}`)
 
     let addr: string[] | null
@@ -370,7 +375,14 @@ export async function startRun(config: RunnerConfig, hooks: RunnerHooks, project
         return
       }
     }
-    await store.startChallenge(ch.unique_code, addr, ch.flag_count, ch.description ?? undefined)
+    const existing = store.state.challenges[ch.unique_code]
+    if (attempt > 1 && existing) {
+      await store.reactivateChallenge(ch.unique_code, addr, ch.correct_flag_count ?? 0, ch.flag_count)
+      wlog(`继承第 1..${attempt - 1} 次尝试: ${existing.findings.length} 条 findings / hint${existing.hint ? '有' : '无'} / 平台已记 ${ch.correct_flag_count ?? 0}/${ch.flag_count} flags`)
+    } else {
+      await store.startChallenge(ch.unique_code, addr, ch.flag_count, ch.description ?? undefined)
+    }
+    passStarted++
     const target = targetMode
       ? (/^https?:\/\//.test(addr[0]) ? addr[0] : `http://${addr[0]}`)
       : `http://${addr[0]}`
@@ -389,7 +401,6 @@ export async function startRun(config: RunnerConfig, hooks: RunnerHooks, project
       : ''
     const context: Context = { systemPrompt: systemPrompt + modePrompt, messages: [] }
     const tools = [...builtinTools(), ...securityTools(cfg, store, ch.unique_code, { benchmark: !targetMode }), penTool]
-    let hintUsed = false // 每题只自动换一次 hint(扣分)
     const transcriptFile = path.join(store.dir, `transcript-${ch.unique_code.replace(/[^\w.-]/g, '_')}.jsonl`)
     const tlog = (rec: object) =>
       fs.appendFile(transcriptFile, JSON.stringify({ ts: new Date().toISOString(), ...rec }) + '\n').catch(() => {})
@@ -429,8 +440,8 @@ export async function startRun(config: RunnerConfig, hooks: RunnerHooks, project
         const curAddr = st?.addr?.length ? st.addr : addr
         const curTarget = /^https?:\/\//.test(curAddr[0]) ? curAddr[0] : `http://${curAddr[0]}`
         let content: string
-        if (round === 1) {
-          // recon 阶段:先信息收集,不催工具——是否调用由模型自主判断
+        if (round === 1 && st.findings.length === 0) {
+          // recon 阶段(仅首次尝试且零 findings):先信息收集,不催工具——是否调用由模型自主判断
           content = `[recon 阶段 · 第 1 轮]\n题目: ${ch.unique_code}(${ch.total_score}分, ${ch.flag_count} flag)\n描述: ${ch.description ?? '无'}\n目标: ${curTarget}\n\n`
             + (ch.flag_count > 1
               ? `本题有 ${ch.flag_count} 个 flag,是多阶段链路题(入口→立足点→内网横向→核心数据)。recon 时特别留意页面注释/JS/报错里的内网主机、网段、凭证、跳板机线索,全部写进 journal。\n`
@@ -455,6 +466,7 @@ export async function startRun(config: RunnerConfig, hooks: RunnerHooks, project
             lessons: store.state.lessons,
           }
           content = `[state]\n${JSON.stringify(snapshot, null, 2)}\n\n题目描述: ${ch.description ?? '无'}\n`
+            + (attempt > 1 && round === 1 ? `\n[第 ${attempt} 次尝试] 环境已重建(旧容器已销毁,此前 webshell/内网地址已失效),题目知识见快照 findings。不要重复侦察,直接按 next_plan 推进、重新建立立足点。\n` : '')
             + (injections.length ? `\n[人类指令]\n${injections.join('\n')}\n` : '')
             + `环境纪律:只攻击 env_addrs 内地址;网段内其他主机属于其他题目或废弃容器,不要碰;目标失联先用 benchmark_api list 刷新地址。\n`
             + `基于以上状态执行下一步。结束前必须调用 journal。`
@@ -551,28 +563,32 @@ export async function startRun(config: RunnerConfig, hooks: RunnerHooks, project
           break
         }
         if (cur.no_progress >= stallLimit) {
-          // 停滞先自动换 hint(扣分换线索,比 0 分强);hint 用过才走告警决策
-          if (!hintUsed && !targetMode) {
-            hintUsed = true
-            // 优先用缓存(模型可能已自行兑换过,重复兑换重复扣分)
+          if (!targetMode && !hooks.askHuman) {
+            // 无人值守 benchmark:停滞 → 周期性 hint 提醒,不弃题。
+            // hint 每题只兑换一次(平台是固定文本,重复兑换重复扣分),之后注入缓存文本。
+            // 题目靠轮次上限/wall-clock/全局 deadline 收口,未完成的由后续 pass 重试(2026-08-15 复盘)
             let hintText = cur.hint ?? null
             if (!hintText) {
               const hint = await callApi(cfg, 'hint', { unique_code: ch.unique_code })
               hintText = hint.ok ? ((hint.data as { hint?: string | null }).hint ?? null) : null
               if (hintText) await store.setHint(ch.unique_code, hintText)
-              wlog(`停滞触发,自动获取 hint(扣分): ${hintText ?? '(无提示内容/不可用)'}`)
+              wlog(`停滞触发,兑换 hint(扣分): ${hintText ?? '(无提示内容/不可用)'}`)
             } else {
-              wlog(`停滞触发,使用已缓存的 hint(不重复扣分): ${hintText}`)
+              wlog(`停滞触发,注入缓存 hint 提醒(不重复扣分)`)
             }
             context.messages.push({
               role: 'user',
-              content: `[平台提示(已扣分)]\n${hintText ?? '本题无提示内容。'}\n结合提示调整攻击方向继续。结束前必须调用 journal。`,
+              content: `[停滞提醒(平台提示,缓存注入未重复扣分)]\n${hintText ?? '本题无平台提示。'}\n你已多轮无实质进展:换一个攻击面/漏洞类型/入口,或把当前问题拆小。结束前必须调用 journal。`,
             })
             cur.no_progress = 0
             continue
           }
+          // 有人值守 / target 靶场模式:停滞告警交决策(无人值守 target 默认 skip)
           const decision = await raiseAlert(ch.unique_code, '多轮无实质进展,疑似卡壳', cur.no_progress)
-          if (decision === 'skip') break
+          if (decision === 'skip') {
+            humanSkipped.add(ch.unique_code)
+            break
+          }
           cur.no_progress = 0
         }
       }
@@ -583,37 +599,59 @@ export async function startRun(config: RunnerConfig, hooks: RunnerHooks, project
 
     const final = store.state.challenges[ch.unique_code]
     if (final.status === 'solved') {
-      solved.push(ch.unique_code)
       await store.finishChallenge(ch.unique_code, 'solved')
       wlog(`✅ ${ch.unique_code} 通关 (${final.flags_found}/${final.flags_total} flags, +${final.score}分)`)
     } else {
-      // 含被中止/超时打断的题(status 仍是 active)——统一记为 abandoned,不再污染状态
+      // 含被中止/超时打断的题(status 仍是 active)——统一记为 abandoned;后续 pass 会重试(人类 skip 的除外)
       const interrupted = final.status === 'active' && (hooks.signal?.aborted || (store.timeLeft() ?? 1) <= 0)
-      abandoned.push(ch.unique_code)
       await store.finishChallenge(ch.unique_code, 'abandoned')
       await store.appendAlert({
         challenge: ch.unique_code, kind: 'abandoned',
-        message: interrupted ? '任务中止/超时,本题未完成' : '未解出,已换题',
+        message: interrupted ? '任务中止/超时,本题未完成'
+          : humanSkipped.has(ch.unique_code) ? '人类决策跳过,本场不再重试'
+          : `第 ${attempt} 次尝试未解出,待后续 pass 重试`,
         rounds: final.rounds,
       })
-      wlog(`❌ ${ch.unique_code} ${interrupted ? '中断' : '放弃'} (${final.rounds} 轮)`)
+      wlog(`❌ ${ch.unique_code} ${interrupted ? '中断' : humanSkipped.has(ch.unique_code) ? '跳过' : `第 ${attempt} 次尝试未竟,待重试`} (${final.rounds} 轮)`)
     }
   }
 
   /** worker:从队列取题,直到队列空/中止/超时 */
-  const challengeWorker = async (workerId: number): Promise<void> => {
+  const challengeWorker = async (workerId: number, pass: number): Promise<void> => {
     while (true) {
       if (hooks.signal?.aborted) { log(`[w${workerId}] 已中止`); return }
       if ((store.timeLeft() ?? 1) <= 0) { log(`[w${workerId}] 时间耗尽`); return }
       const ch = todo.shift()
       if (!ch) return
       if (!(await ensureVpn())) { log(`[w${workerId}] VPN 未恢复,停止`); return }
-      await processChallenge(ch, workerId)
+      await processChallenge(ch, workerId, pass)
     }
   }
 
-  const workerCount = Math.min(config.maxConcurrent, todo.length)
-  await Promise.all(Array.from({ length: workerCount }, (_, i) => challengeWorker(i + 1)))
+  // 多 pass 调度:首轮全量;之后只要还有未完成题且剩余时间 >10min,就重拉平台清单再试。
+  // 半解题的平台进度(is_completed/correct_flag_count)服务端保留,重试不丢已得 flag 分;
+  // findings/hint 经 reactivateChallenge 继承,再尝试不做重复侦察(2026-08-15 复盘)
+  let pass = 1
+  while (true) {
+    if (hooks.signal?.aborted) break
+    if (pass > 1) {
+      if (targetMode) break // 靶场模式单题,不多 pass
+      if ((store.timeLeft() ?? 1) <= 10 * 60_000) { log('[runner] 剩余时间不足 10 分钟,不再开新 pass'); break }
+      const listRes = await callApi(cfg, 'list', {})
+      if (!listRes.ok) { log(`[runner] 第 ${pass} 轮拉取题目失败(${listRes.code}),结束`); break }
+      todo = (listRes.data as ChallengeInfo[])
+        .filter(c => !c.is_completed && !humanSkipped.has(c.unique_code))
+        .sort(challengeOrder)
+    }
+    if (!todo.length) { log(pass === 1 ? '[runner] 无待解题目' : '[runner] 所有题目已完成,提前收工'); break }
+    log(`[runner] === 第 ${pass} 轮尝试: ${todo.length} 道题待解 ===`)
+    passStarted = 0
+    const workerCount = Math.min(config.maxConcurrent, todo.length)
+    const curPass = pass
+    await Promise.all(Array.from({ length: workerCount }, (_, i) => challengeWorker(i + 1, curPass)))
+    if (passStarted === 0) { log('[runner] 本轮没有题目成功启动容器,结束'); break }
+    pass++
+  }
 
   // 赛后经验沉淀:从本轮 rounds 提炼进经验层(跨会话积累)
   let experienceAdded = 0
@@ -632,6 +670,10 @@ export async function startRun(config: RunnerConfig, hooks: RunnerHooks, project
     for (const [name, n] of Object.entries(toolCallCounts)) global[name] = (global[name] ?? 0) + n
     await fs.writeFile(statsFile, JSON.stringify(global, null, 2) + '\n', 'utf-8')
   } catch { /* 统计失败不影响主流程 */ }
+
+  // 最终记账按状态库现况计算(多 pass 下同一题可能先 abandoned 后 solved,数组累加会重复/失真)
+  const solved = Object.values(store.state.challenges).filter(c => c.status === 'solved').map(c => c.code)
+  const abandoned = Object.values(store.state.challenges).filter(c => c.status !== 'solved').map(c => c.code)
 
   const summary: RunSummary = {
     finished_at: new Date().toISOString(),

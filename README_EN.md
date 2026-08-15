@@ -84,7 +84,7 @@ Main configuration keys (`config.json`, takes precedence over environment variab
 | `NANOPI_API_KEY` / `NANOPI_BASE_URL` / `NANOPI_MODEL` | Key / endpoint / model of the OpenAI-compatible API |
 | `BENCHMARK_TOKEN` / `BENCHMARK_BASE_URL` | TSec Benchmark credentials and endpoint |
 | `TASK_MINUTES` | Time limit per task (minutes) |
-| `STALL_ROUNDS` | Rounds without progress before a stall alert fires |
+| `STALL_ROUNDS` | Rounds without progress before a stall reminder (unattended: inject hint and continue, never auto-skip) |
 | `MAX_ROUNDS` | Maximum rounds per task |
 | `VPN_CHECK` | Connectivity probe address for the benchmark VPN |
 

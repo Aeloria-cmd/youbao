@@ -153,6 +153,22 @@ export class StateStore {
     return this.save()
   }
 
+  /** 再次尝试(多 pass 调度):保留 findings/hint(题目知识仍然有效),
+   *  清空 access/internal_hosts(旧容器已销毁,shell/拓扑失效),
+   *  按平台记录恢复 flags_found;rounds 总数跨 attempt 累计保留 */
+  async reactivateChallenge(code: string, addr: string[], flagsFound: number, flagsTotal: number): Promise<void> {
+    const ch = this.state.challenges[code]
+    if (!ch) return this.startChallenge(code, addr, flagsTotal)
+    ch.status = 'active'
+    ch.addr = addr
+    ch.flags_found = flagsFound
+    ch.flags_total = flagsTotal
+    ch.no_progress = 0
+    ch.access = []
+    ch.internal_hosts = []
+    await this.save()
+  }
+
   /** journal 工具调用:向指定题目追加一轮记录并更新快照计数 */
   async appendRound(code: string, rec: Omit<RoundRecord, 'round' | 'ts' | 'challenge'>): Promise<number> {
     const ch = this.state.challenges[code]

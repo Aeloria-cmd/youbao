@@ -84,7 +84,7 @@ npm run web            # Web UI → http://localhost:8080（右上角 ⚙ 可直
 | `NANOPI_API_KEY` / `NANOPI_BASE_URL` / `NANOPI_MODEL` | OpenAI 兼容 API 的密钥 / 地址 / 模型 |
 | `BENCHMARK_TOKEN` / `BENCHMARK_BASE_URL` | TSec Benchmark 的凭证与地址 |
 | `TASK_MINUTES` | 单题时限（分钟） |
-| `STALL_ROUNDS` | 连续多少轮无进展触发停滞告警 |
+| `STALL_ROUNDS` | 连续多少轮无进展触发停滞提醒（无人值守时注入 hint 继续，不弃题） |
 | `MAX_ROUNDS` | 单题最大轮次 |
 | `VPN_CHECK` | 靶场 VPN 连通性探测地址 |
 
