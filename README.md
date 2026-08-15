@@ -15,22 +15,22 @@
   </p>
 
   <p>
-    <a href="#-快速开始">快速开始</a> ·
-    <a href="#-系统架构">系统架构</a> ·
-    <a href="#-核心特性">核心特性</a> ·
-    <a href="#-docker-部署">Docker</a>
+    <a href="#快速开始">快速开始</a> ·
+    <a href="#系统架构">系统架构</a> ·
+    <a href="#核心特性">核心特性</a> ·
+    <a href="#docker-部署">Docker</a>
   </p>
 </div>
 
 ---
 
-## ✨ 项目简介
+## 项目简介
 
 邮宝 YouBao 是一个面向 **TSec Benchmark 靶场** 的自主渗透 Agent：给它一个靶机，它自己侦察、自己选工具、自己写脚本、自己总结 flag，全程可无人值守，也可以随时通过 Web UI 接管。
 
 整个系统构建在 **nano-pi** 内核之上 —— 一个 5 个文件、600+ 行的极简 TypeScript Coding Agent（cli / tui / agent / tools / llm）。内核没有任何框架魔法，每一次 LLM 调用、每一次工具执行都是看得见的事件流，这让邮宝的每一步渗透行为都**可观测、可审计、可回放**。
 
-## 🏗 系统架构
+## 系统架构
 
 <p align="center">
   <img src="./docs/images/youbao-architecture.png" alt="YouBao 系统架构" width="900">
@@ -44,7 +44,7 @@
   <img src="./docs/images/youbao-round.png" alt="YouBao 单轮执行流" width="480">
 </p>
 
-## 🔥 核心特性
+## 核心特性
 
 - **ReAct 双层架构** —— 外层 Task Manager 负责确定性控制（选题 / 容器 / 时限 / 停滞告警），内层 ReAct 循环负责智能决策（状态快照注入 → 推理 → 工具行动 → journal 汇报），LLM 只做它擅长的事
 - **三层记忆** —— `state.json`（每轮注入的当前快照）、`rounds.jsonl`（全量可审计轮次记录）、lessons（跨题经验沉淀），题目之间的经验可以复用
@@ -53,7 +53,7 @@
 - **指标自采集** —— token 成本、每题耗时、得分、告警记录自动落盘 `summary.json`，跑完即可复盘
 - **一体化 Docker 镜像** —— Web UI + 跑分内核 + 全套渗透工具，构建期资产离线携带，`docker build` 一条命令出镜像
 
-## 🚀 快速开始
+## 快速开始
 
 需要 **Node.js 22+** 和一个 OpenAI 兼容 API。
 
@@ -82,7 +82,7 @@ npm run web            # Web UI → http://localhost:8080（右上角 ⚙ 可直
 | `MAX_ROUNDS` | 单题最大轮次 |
 | `VPN_CHECK` | 靶场 VPN 连通性探测地址 |
 
-## 🐳 Docker 部署
+## Docker 部署
 
 ```bash
 docker build -t youbao .
@@ -95,7 +95,7 @@ docker run -p 8080:8080 --env-file .env \
 
 > 构建所需的离线资产（ffuf / nuclei / nuclei-templates）随仓库携带于 `build-assets/`，当前为 linux_arm64 版本；amd64 构建请替换其中文件。容器流量默认经宿主机 NAT 转发，宿主机连上靶场 VPN 后容器即可直达靶机。
 
-## 📁 项目结构
+## 项目结构
 
 ```
 ├── src/
@@ -115,7 +115,7 @@ docker run -p 8080:8080 --env-file .env \
 └── Dockerfile           # 一体化镜像：Web UI + 内核 + 渗透工具
 ```
 
-## 📖 nano-pi 内核与教学网站
+## nano-pi 内核与教学网站
 
 邮宝的内核 nano-pi 本身是一个独立的教学项目：沿着 [pi](https://github.com/earendil-works/pi) 的数据流拆解，需要什么、造什么。配套教学网站把文章和源码放在一起，阅读推进时右侧编辑器逐步补全代码，并支持 Trace 断点逐行跟踪。
 
@@ -125,12 +125,12 @@ cd web && npm install && npm run dev
 
 在线阅读（原作站点）：<https://pi-from-scratch.vercel.app>
 
-## 🙏 致谢
+## 致谢
 
 - [pi](https://github.com/earendil-works/pi) —— nano-pi 内核的数据流与核心思想来源
 - [SaladDay/pi-from-scratch](https://github.com/SaladDay/pi-from-scratch) —— nano-pi 内核与教学网站基于其 MIT 许可的原始作品二次开发
 - [pi-book](https://books.antinomie.org/pi/) —— 深入理解 pi 的延伸阅读
 
-## 📄 License
+## License
 
 本项目基于 MIT 许可证发布，内核与教学网站原始版权归 SaladDay 所有，详见 [LICENSE](LICENSE)。
