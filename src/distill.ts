@@ -1,7 +1,7 @@
 // src/distill.ts
 // 工具蒸馏工作流（二次开发新增）—— agent 自写脚本的沉淀管道。
 //
-// 流程（人工在 Web UI 点击触发,不自动跑）：
+// 流程（Web UI 手动点击触发,或 staging 积累到 AUTO_DISTILL_THRESHOLD 个时自动触发）：
 //   skills_staging/ 下的临时脚本积累到阈值
 //   → runDistill 开一个独立 LLM 会话：读 staging 脚本 + 近期 rounds.jsonl
 //   → 找出有共性的能力,重构成一个有独创性的通用工具(参数化 + --selftest)
@@ -16,8 +16,8 @@ import { builtinTools } from './tools.js'
 import { CUSTOM_DIR, CUSTOM_REGISTRY, STAGING_DIR, loadRegistry } from './pentools.js'
 import type { Model, Context } from './llm.js'
 
-/** staging 积累到该数量时,UI 提示可以尝试工具整合 */
-export const DISTILL_THRESHOLD = 5
+/** staging 积累到该数量时自动触发一次工具整合(Web UI 后台定时检查,可用 AUTO_DISTILL_THRESHOLD 环境变量覆盖) */
+export const AUTO_DISTILL_THRESHOLD = Number(process.env.AUTO_DISTILL_THRESHOLD) || 20
 
 export type DistillEvent =
   | { type: 'log'; text: string }

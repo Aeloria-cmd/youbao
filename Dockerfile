@@ -1,17 +1,8 @@
-# 邮宝 YouBao —— 安全攻防 agent —— 一体化镜像
-# Web UI + ReAct 跑分内核 + 内置渗透工具(ffuf/nmap/nuclei/sqlmap/whatweb/pwntools/slither)
-#
-# 构建(全部构建期资产已离线到 build-assets/,仅需拉基础镜像与 apt/pip/npm 源):
-#   docker build -t youbao .
-# 运行(config.json 为主配置;经验/staging/蒸馏工具/运行记录挂载持久化):
-#   docker run -p 8080:8080 \
-#     -v $(pwd)/config.json:/app/config.json \
-#     -v $(pwd)/runs:/app/runs \
-#     -v $(pwd)/experience:/app/experience \
-#     -v $(pwd)/skills_staging:/app/skills_staging \
-#     -v $(pwd)/pentools/custom:/app/pentools/custom \
-#     youbao
-# 也可 docker compose up -d(见 docker-compose.yml)
+# 邮宝 YouBao —— TSecBench 托管模式提交镜像(linux/amd64)
+# 与本地版差异:入口为 headless runner(启动即解题);build-assets 为 linux_amd64 二进制。
+# 构建/导出:
+#   docker build --platform linux/amd64 -t youbao:hosted .
+#   docker save youbao:hosted | gzip > youbao-hosted.tar.gz
 
 # 基础镜像经 DaoCloud 镜像源拉取(docker.io 在当前网络被阻断;
 # 网络正常环境可改回 node:22-slim,效果相同)
@@ -29,8 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip3 install --no-cache-dir --break-system-packages \
       pwntools ROPgadget
 
-# ffuf / nuclei / nuclei 模板:宿主预先下载到 build-assets/(走宿主代理,绕开构建期网络问题),
-# 构建只 COPY 不解网。当前资产为 linux_arm64;amd64 构建请替换 build-assets 内文件。
+# ffuf / nuclei / nuclei 模板:宿主预先下载到 build-assets/(本目录为 linux_amd64 版本),
+# 构建只 COPY 不解网。
 COPY build-assets/ffuf.tar.gz /tmp/ffuf.tar.gz
 COPY build-assets/nuclei.zip /tmp/nuclei.zip
 COPY build-assets/nuclei-templates.zip /tmp/nt.zip
@@ -55,7 +46,7 @@ RUN ln -sf /opt/wordlists/passwords-top.txt /opt/wordlists/ssh-passwords.txt \
     && ln -sf /opt/wordlists/passwords-top.txt /opt/wordlists/mysql-passwords.txt \
     && ln -sf /opt/wordlists/passwords-top.txt /opt/wordlists/wp-passwords.txt
 
-# 横向/隧道工具:构建前在宿主运行 bash build-assets/fetch-pivot-tools.sh [arm64|amd64] 填充;
+# 横向/隧道工具:构建前在宿主运行 bash build-assets/fetch-pivot-tools.sh 填充;
 # 目录里只有 README 时此步为空操作
 COPY build-assets/pivot /tmp/pivot
 RUN set -e; mkdir -p /opt/pivot; \
@@ -77,4 +68,7 @@ RUN npm run build && npm prune --omit=dev \
     && mkdir -p runs skills_staging   # 运行时目录(不挂载也能跑,挂载则持久化)
 
 EXPOSE 8080
-CMD ["node", "dist/webui.js"]
+# 托管模式入口:headless 跑分,容器启动即解题(无人值守,告警自动 skip)。
+# 配置全部走平台注入的环境变量(BENCHMARK_TOKEN/BENCHMARK_BASE_URL 由平台下发,
+# NANOPI_API_KEY/NANOPI_BASE_URL 等在本平台页面配置;镜像内不含 config.json)。
+CMD ["node", "dist/runner.js"]

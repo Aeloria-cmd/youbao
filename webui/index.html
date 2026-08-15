@@ -46,8 +46,7 @@
   .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
   .lights i:nth-child(1) { background: #ff5f57; } .lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
   #status { font-size: 12px; color: var(--text2); }
-  #alert-bar, #distill-bar { display: none; width: 100%; padding: 9px 14px; border-radius: 10px; font-size: 13px; }
-  #distill-bar { background: var(--tint-orange); border: 1px solid var(--orange); color: var(--orange); cursor: pointer; }
+  #alert-bar { display: none; width: 100%; padding: 9px 14px; border-radius: 10px; font-size: 13px; }
   #alert-bar { background: var(--tint-red); border: 1px solid var(--red); color: var(--red); }
   #alert-bar button { margin-left: 8px; }
   #settings-panel { display: none; width: 100%; padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
@@ -214,7 +213,6 @@
   <span id="status"></span>
   <button id="btn-theme" title="切换主题">🌓</button>
   <button id="btn-settings">⚙ 设置</button>
-  <div id="distill-bar"></div>
   <div id="alert-bar"></div>
   <div id="settings-panel">
     <div id="settings-fields"></div>
@@ -750,8 +748,6 @@ $('btn-distill').onclick = async () => {
   const r = await api('/api/distill', { method: 'POST' })
   if (r.error) lvLine('lv-line', `[distill 失败] ${r.error}`)
 }
-// 横幅本身也可点击(主页没有按钮,横幅就是入口)
-$('distill-bar').onclick = () => $('btn-distill').click()
 $('btn-inject').onclick = async () => {
   const text = $('inject-text').value.trim(); if (!text) return
   $('inject-text').value = ''
@@ -808,12 +804,6 @@ async function pollState() {
 async function pollStaging() {
   try {
     const s = await api('/api/staging')
-    const bar = $('distill-bar')
-    // 项目页已有「工具整合」按钮,横幅只在其他页面显示,避免重复入口
-    if (s.count >= s.threshold && !s.distilling && !$('page-project').classList.contains('on')) {
-      bar.style.display = 'block'
-      bar.textContent = `🛠 已积累 ${s.count} 个临时脚本——点击此条启动工具整合`
-    } else bar.style.display = 'none'
     $('btn-distill').textContent = `工具整合(${s.count})`
     $('btn-distill').disabled = s.distilling
     $('btn-start').disabled = s.running

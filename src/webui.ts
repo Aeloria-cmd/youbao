@@ -12,7 +12,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { promises as fs } from 'node:fs'
 import * as path from 'node:path'
 import { startRun, configFromEnv, type RunnerEvent, type RunSummary } from './runner.js'
-import { runDistill, listStaging, ensureCustomDir, DISTILL_THRESHOLD, type DistillEvent } from './distill.js'
+import { runDistill, listStaging, ensureCustomDir, AUTO_DISTILL_THRESHOLD, type DistillEvent } from './distill.js'
 import { CONFIG_FIELDS, readConfigFile, writeConfigFile, configValue, CONFIG_FILE } from './config.js'
 import { listProjects, createProject, deleteProject, type Project } from './projects.js'
 import { PROJECT_ROOT, loadRegistry, addCustomTool, removeCustomTool, STAGING_DIR } from './pentools.js'
@@ -37,6 +37,20 @@ export function createWebServer(opts: { configFile?: string; runsDir?: string } 
     backlog.push(line)
     if (backlog.length > 500) backlog.shift()
     for (const c of clients) c.write(line)
+  }
+
+  /** 启动一次工具蒸馏(手动/自动共用);已在进行或未配置 API key 时返回错误 */
+  const startDistill = async (auto: boolean): Promise<{ ok: boolean; error?: string }> => {
+    if (distilling) return { ok: false, error: '蒸馏进行中' }
+    const config = await configFromEnv(configFile)
+    if (!config.model.apiKey) return { ok: false, error: '服务器未配置 NANOPI_API_KEY' }
+    distilling = true
+    await ensureCustomDir()
+    broadcast({ src: 'server', type: 'status', message: auto ? `staging 达 ${AUTO_DISTILL_THRESHOLD} 个脚本,自动工具蒸馏启动` : '工具蒸馏启动' })
+    runDistill(config.model, (ev) => broadcast({ src: 'distill', ...ev }))
+      .catch((e: Error) => broadcast({ src: 'server', type: 'error', message: e.message }))
+      .finally(() => { distilling = false })
+    return { ok: true }
   }
 
   const json = (res: ServerResponse, status: number, data: unknown) => {
@@ -266,7 +280,7 @@ export function createWebServer(opts: { configFile?: string; runsDir?: string } 
       }
       if (route === 'GET /api/staging') {
         const files = await listStaging()
-        return json(res, 200, { count: files.length, threshold: DISTILL_THRESHOLD, files, running, distilling })
+        return json(res, 200, { count: files.length, auto_threshold: AUTO_DISTILL_THRESHOLD, files, running, distilling })
       }
       if (route === 'POST /api/start') return await startRunHandler(req, res)
       if (route === 'POST /api/stop') {
@@ -290,16 +304,9 @@ export function createWebServer(opts: { configFile?: string; runsDir?: string } 
         return json(res, 200, { ok: true })
       }
       if (route === 'POST /api/distill') {
-        if (distilling) return json(res, 409, { error: '蒸馏进行中' })
-        const config = await configFromEnv(configFile)
-        if (!config.model.apiKey) return json(res, 400, { error: '服务器未配置 NANOPI_API_KEY' })
-        distilling = true
-        await ensureCustomDir()
-        broadcast({ src: 'server', type: 'status', message: '工具蒸馏启动' })
-        runDistill(config.model, (ev) => broadcast({ src: 'distill', ...ev }))
-          .catch((e: Error) => broadcast({ src: 'server', type: 'error', message: e.message }))
-          .finally(() => { distilling = false })
-        return json(res, 200, { ok: true })
+        const r = await startDistill(false)
+        if (r.ok) return json(res, 200, { ok: true })
+        return json(res, r.error === '蒸馏进行中' ? 409 : 400, { error: r.error })
       }
 
       if (route === 'POST /api/tools/create') {
@@ -350,6 +357,28 @@ export function createWebServer(opts: { configFile?: string; runsDir?: string } 
       json(res, 500, { error: (e as Error).message })
     }
   })
+
+  // 自动工具整合:staging 积累到 AUTO_DISTILL_THRESHOLD(默认 20)个脚本时自动蒸馏一次。
+  // 同一数量只触发一次(避免无产出时每分钟空转),有新增脚本使计数变化后再次达标会再触发。
+  // 关键约束:只在跑分空闲时真正启动(不打断轮次)——运行中蒸馏会与 worker 抢 LLM 配额,
+  // 且蒸馏改写 registry.json 期间 pentool 调用可能读到半截文件。运行结束后 60s 内补触发。
+  let lastAutoCount = -1
+  let distillPending = false
+  const autoTimer = setInterval(async () => {
+    try {
+      if (distilling) return
+      const count = (await listStaging()).length
+      if (count >= AUTO_DISTILL_THRESHOLD && count !== lastAutoCount) {
+        lastAutoCount = count
+        distillPending = true
+      }
+      if (distillPending && !running) {
+        distillPending = false
+        await startDistill(true)
+      }
+    } catch { /* 自动触发失败不影响服务 */ }
+  }, 60_000)
+  autoTimer.unref?.()
 
   return server
 }
