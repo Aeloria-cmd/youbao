@@ -502,7 +502,10 @@ export async function startRun(config: RunnerConfig, hooks: RunnerHooks, project
           if (turnTimer) clearTimeout(turnTimer)
           hooks.signal?.removeEventListener('abort', onAbort)
         }
-        if (turnCtrl.signal.aborted && !hooks.signal?.aborted) {
+        // 单轮超时与 LLM 报错分开记账:超时是"任务太重/命令太長"的信号,不是基础设施故障——
+        // 计入 errorStreak 会把"连续 3 个重活 turn"误判成 LLM 故障强退本题(2026-08-15 复盘实测)
+        const turnTimedOut = turnCtrl.signal.aborted && !hooks.signal?.aborted
+        if (turnTimedOut) {
           turnError = `单轮超时(${config.turnTimeoutSec}s),强制收束`
           wlog(turnError)
         }
@@ -514,21 +517,27 @@ export async function startRun(config: RunnerConfig, hooks: RunnerHooks, project
             { score: scoreBefore, flags: flagsBefore },
             { score: store.state.total_score, flags: cur.flags_found },
           )
-          if (turnError) errorStreak++
+          if (turnError && !turnTimedOut) errorStreak++
           else errorStreak = 0
           await store.appendRound(ch.unique_code, {
-            thought: turnError ? '(LLM 调用出错)' : progress ? '(进展来自 submit,模型未写 journal)' : '(missing journal)',
+            thought: turnTimedOut ? '(单轮超时强制收束)' : turnError ? '(LLM 调用出错)' : progress ? '(进展来自 submit,模型未写 journal)' : '(missing journal)',
             hypothesis: '-', actions: [],
-            observation: turnError ? `LLM error: ${turnError.slice(0, 300)}` : '-',
-            progress, next_plan: turnError ? 'LLM 连续报错,检查模型服务/限速' : '模型未按要求写 journal,下轮已提醒',
+            observation: turnError ? `${turnTimedOut ? 'turn timeout' : 'LLM error'}: ${turnError.slice(0, 300)}` : '-',
+            progress, next_plan: turnTimedOut ? '任务拆小,每轮先写 journal 再做大动作' : turnError ? 'LLM 连续报错,检查模型服务/限速' : '模型未按要求写 journal,下轮已提醒',
           })
-          if (turnError) {
+          if (turnError && !turnTimedOut) {
             // LLM 连续报错 3 轮:不是"卡壳",是基础设施问题——告警后退出本题
             if (errorStreak >= 3) {
               await store.appendAlert({ challenge: ch.unique_code, kind: 'error', message: `LLM 连续 ${errorStreak} 轮报错: ${turnError.slice(0, 150)}`, rounds: cur.rounds })
               wlog(`LLM 连续 ${errorStreak} 轮报错,退出本题`)
               break
             }
+          } else if (turnTimedOut) {
+            // 超时不退题,但必须告诉模型发生了什么——否则它会原样重试同一条重命令,连续超时把题耗死
+            context.messages.push({
+              role: 'user',
+              content: `系统提醒:上一轮超过单轮时限(${config.turnTimeoutSec}s)被强制收束,未写入 journal。请把耗时操作拆小(分批扫描/缩短字典/后台运行+轮询结果),每轮先做小步动作、结束前必须调用 journal。`,
+            })
           } else {
             context.messages.push({ role: 'user', content: '系统提醒:你上一轮没有调用 journal。每轮结束前必须调用 journal 汇报,这是硬性要求。' })
           }
