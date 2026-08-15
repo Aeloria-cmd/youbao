@@ -2,6 +2,8 @@
 
   <h1>YouBao</h1>
 
+  <img src="./docs/images/youbao-mascot.png" alt="YouBao" width="560">
+
   <p>
     An autonomous penetration-testing agent for security benchmarks — two-layer ReAct architecture, three-tier memory, and a self-expanding tool registry<br>
     Powered by nano-pi, a 600-line TypeScript agent kernel with zero black boxes and line-by-line auditability

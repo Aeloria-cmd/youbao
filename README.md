@@ -2,6 +2,8 @@
 
   <h1>邮宝 YouBao</h1>
 
+  <img src="./docs/images/youbao-mascot.png" alt="YouBao" width="560">
+
   <p>
     面向安全靶场的自主渗透 Agent —— ReAct 双层架构 · 三层记忆 · 可自我扩展的工具注册表<br>
     内核来自 600 行 TypeScript 的 nano-pi，零黑盒、可打断点逐行审计
