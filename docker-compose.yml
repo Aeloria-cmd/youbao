@@ -1,0 +1,22 @@
+# 邮宝 YouBao 安全攻防 agent
+# 用法:docker compose up -d --build(或 docker build -t youbao . && docker run ...)
+# 网络:默认 bridge——OrbStack 下实测容器可共享宿主机网络(含 VPN 路由);
+#       若连 VPN 后容器内 curl http://10.0.100.58 不通,改用下一行 host 模式
+#       network_mode: host
+services:
+  youbao:
+    build: .
+    image: youbao
+    ports:
+      - "8080:8080"
+    # 配置以 config.json 挂载为主;.env 可选兜底(存在才加载,避免文件不存在报错)
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./config.json:/app/config.json
+      - ./runs:/app/runs
+      - ./skills_staging:/app/skills_staging
+      - ./pentools/custom:/app/pentools/custom
+      - ./experience:/app/experience
+    restart: unless-stopped

@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.superpowers/
+.DS_Store
+.env*
+!.env.example
+*.log
+tmp.md
+.vercel
+docs/pi-from-scratch.md
+docs/plans/
+docs/specs/
+
+# sec agent 运行产物
+runs/
+skills_staging/
+config.json
+projects.json
+tool-stats.json
+
+# 测试（本地保留，不发布）
+test/
+vitest.config.ts

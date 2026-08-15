@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>邮宝 · 安全攻防 Agent</title>
+<style>
+  :root {
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+    --mono: "SF Mono", ui-monospace, Menlo, monospace;
+    --bg: #f5f5f7; --panel: rgba(255,255,255,.75); --card: #ffffff; --border: #d9d9e0;
+    --text: #1d1d1f; --text2: #6e6e73; --accent: #0071e3;
+    --green: #34c759; --red: #ff3b30; --orange: #ff9500; --purple: #af52de; --blue: #0071e3;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 6px 18px rgba(0,0,0,.05);
+    --tint-purple: rgba(175,82,222,.09); --tint-blue: rgba(0,113,227,.08); --tint-green: rgba(52,199,89,.10); --tint-red: rgba(255,59,48,.09); --tint-orange: rgba(255,149,0,.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #1c1c1e; --panel: rgba(44,44,46,.75); --card: #2c2c2e; --border: #3f3f45;
+      --text: #f5f5f7; --text2: #98989e; --accent: #0a84ff;
+      --green: #30d158; --red: #ff453a; --orange: #ff9f0a; --purple: #bf5af2; --blue: #0a84ff;
+      --shadow: 0 1px 3px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.28);
+      --tint-purple: rgba(191,90,242,.14); --tint-blue: rgba(10,132,255,.14); --tint-green: rgba(48,209,88,.14); --tint-red: rgba(255,69,58,.14); --tint-orange: rgba(255,159,10,.16);
+    }
+  }
+  :root[data-theme='dark'] {
+      --bg: #1c1c1e; --panel: rgba(44,44,46,.75); --card: #2c2c2e; --border: #3f3f45;
+      --text: #f5f5f7; --text2: #98989e; --accent: #0a84ff;
+      --green: #30d158; --red: #ff453a; --orange: #ff9f0a; --purple: #bf5af2; --blue: #0a84ff;
+      --shadow: 0 1px 3px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.28);
+      --tint-purple: rgba(191,90,242,.14); --tint-blue: rgba(10,132,255,.14); --tint-green: rgba(48,209,88,.14); --tint-red: rgba(255,69,58,.14); --tint-orange: rgba(255,159,10,.16);
+    }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased; }
+  button { font-family: var(--font); background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 999px; padding: 6px 16px; cursor: pointer; font-size: 13px; box-shadow: var(--shadow); transition: transform .08s, background .15s; }
+  button:hover { background: var(--tint-blue); }
+  button:active { transform: scale(.97); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: transparent; color: #fff; }
+  button.danger { background: var(--red); border-color: transparent; color: #fff; }
+  button.on { background: var(--accent); border-color: transparent; color: #fff; }
+
+  header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--panel); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  header h1 { font-size: 15px; font-weight: 600; color: var(--text); margin-right: auto; letter-spacing: .2px; }
+  .lights { display: flex; gap: 7px; margin-right: 8px; }
+  .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  .lights i:nth-child(1) { background: #ff5f57; } .lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
+  #status { font-size: 12px; color: var(--text2); }
+  #alert-bar, #distill-bar { display: none; width: 100%; padding: 9px 14px; border-radius: 10px; font-size: 13px; }
+  #distill-bar { background: var(--tint-orange); border: 1px solid var(--orange); color: var(--orange); cursor: pointer; }
+  #alert-bar { background: var(--tint-red); border: 1px solid var(--red); color: var(--red); }
+  #alert-bar button { margin-left: 8px; }
+  #settings-panel { display: none; width: 100%; padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+  #settings-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px 16px; }
+  .cfg label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 3px; }
+  .cfg input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 7px 10px; font-size: 12.5px; outline: none; }
+  .cfg input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--tint-blue); }
+
+  #body { flex: 1; display: flex; min-height: 0; }
+  #runs { width: 250px; border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 10px; background: var(--panel); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
+  #runs h2, .side-h { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .4px; margin: 6px 6px 8px; }
+  .run-item { padding: 8px 12px; border-radius: 10px; margin-bottom: 4px; cursor: pointer; font-size: 12.5px; border: 1px solid transparent; }
+  .run-item:hover { background: var(--tint-blue); }
+  .run-item.sel { background: var(--card); border-color: var(--border); box-shadow: var(--shadow); }
+  .run-item .meta { color: var(--text2); margin-top: 3px; font-size: 11px; }
+  .run-item.live { border-color: var(--green); }
+
+  #main { flex: 1; display: flex; min-height: 0; }
+  .view { flex: 1; display: none; min-height: 0; }
+  .view.on { display: flex; }
+  #view-live, #view-challenge { flex-direction: row; }
+  #view-run { flex-direction: column; overflow-y: auto; padding: 16px 20px; }
+
+  #log { flex: 1; overflow-y: auto; padding: 12px 16px; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; }
+  #side { width: 320px; border-left: 1px solid var(--border); padding: 12px; overflow-y: auto; font-size: 12.5px; background: var(--panel); }
+  .kv { display: flex; justify-content: space-between; padding: 2px 0; }
+  .kv b { color: var(--accent); font-weight: 600; }
+  .ch { padding: 7px 10px; margin: 5px 0; background: var(--card); border-radius: 10px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+  .ch.solved { border-left: 3px solid var(--green); }
+  .ch.abandoned { border-left: 3px solid var(--red); opacity: .8; }
+  .tag { font-size: 10.5px; padding: 1px 8px; border-radius: 999px; background: var(--tint-blue); color: var(--blue); margin-left: 6px; }
+
+  #run-summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px 18px; min-width: 110px; box-shadow: var(--shadow); }
+  .stat .v { font-size: 22px; color: var(--accent); font-weight: 700; }
+  .stat .k { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  #ch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .ch-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; cursor: pointer; font-size: 12.5px; box-shadow: var(--shadow); transition: transform .1s; }
+  .ch-card:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .ch-card.solved { border-left: 4px solid var(--green); }
+  .ch-card.abandoned { border-left: 4px solid var(--red); opacity: .8; }
+  .ch-card.active { border-left: 4px solid var(--orange); }
+  .ch-card .desc { color: var(--text2); font-size: 11px; margin-top: 6px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+  #ch-main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  #ch-head { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--panel); }
+  #ch-head .title { font-size: 14px; color: var(--accent); font-weight: 600; }
+  #tabs { display: flex; gap: 4px; padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--panel); }
+  .tab { font-size: 12px; padding: 5px 16px; box-shadow: none; }
+  #ch-content { flex: 1; overflow-y: auto; padding: 14px 18px; font-size: 12.5px; }
+
+  .tt-round { display: flex; align-items: center; gap: 10px; margin: 18px 0 10px; color: var(--text2); font-size: 11.5px; }
+  .tt-round::before, .tt-round::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
+  .tt-bubble { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 10px 14px; margin: 8px 0; white-space: pre-wrap; word-break: break-all; line-height: 1.65; box-shadow: var(--shadow); }
+  .tt-toolcard { border: 1px solid var(--border); border-left: 3px solid var(--purple); border-radius: 10px; margin: 8px 0; background: var(--tint-purple); }
+  .tt-toolcard summary { cursor: pointer; padding: 7px 12px; color: var(--purple); font-size: 12px; list-style: none; }
+  .tt-toolcard summary::before { content: '▸ '; }
+  .tt-toolcard[open] summary::before { content: '▾ '; }
+  .tt-toolcard pre { padding: 8px 12px; margin: 0; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 11.5px; color: var(--text2); white-space: pre-wrap; word-break: break-all; max-height: 320px; overflow-y: auto; }
+  .tt-toolcard.result { border-left-color: var(--blue); background: var(--tint-blue); }
+  .tt-toolcard.result summary { color: var(--blue); }
+
+  .tl { position: relative; padding-left: 26px; }
+  .tl::before { content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: var(--border); }
+  .tl-item { position: relative; margin-bottom: 14px; }
+  .tl-dot { position: absolute; left: -26px; top: 4px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); background: var(--card); font-size: 9px; text-align: center; line-height: 13px; color: var(--text2); }
+  .tl-dot.ok { border-color: var(--green); color: var(--green); }
+  .tl-dot.no { border-color: var(--red); color: var(--red); }
+  .tl-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; box-shadow: var(--shadow); }
+  .tl-card .head { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; font-size: 12px; color: var(--accent); }
+  .tl-field { margin: 6px 0; font-size: 12.5px; }
+  .tl-label { display: inline-block; font-size: 10.5px; color: var(--text2); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; margin-right: 6px; vertical-align: top; }
+  .tl-chip { display: inline-block; background: var(--tint-blue); color: var(--blue); border-radius: 999px; padding: 2px 10px; margin: 2px 4px 2px 0; font-size: 11px; }
+  .tl-obs { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-family: var(--mono); font-size: 11.5px; color: var(--text2); white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; }
+  .tl-find { background: var(--tint-green); border: 1px solid var(--green); border-radius: 8px; padding: 7px 10px; font-size: 11.5px; color: var(--green); }
+
+  .log-time { color: var(--text2); font-family: var(--mono); }
+  .log-alert { color: var(--red); }
+  .log-end { color: var(--orange); }
+  .log-tool { color: var(--purple); }
+  .log-result { color: var(--blue); }
+  .tool-row { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; font-size: 12.5px; box-shadow: var(--shadow); position: relative; display: flex; align-items: flex-start; gap: 10px; }
+  .tool-row .body { flex: 1; min-width: 0; }
+  .tool-row .acts { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .tool-row .del-btn { position: static; }
+  .tool-row .name { color: var(--accent); font-weight: 600; font-family: var(--mono); }
+  .tool-row .usage { color: var(--text2); font-size: 11px; margin-top: 4px; font-family: var(--mono); }
+  .src-tag { font-size: 10px; padding: 1px 8px; border-radius: 999px; margin-left: 8px; }
+  .src-builtin { background: var(--tint-blue); color: var(--blue); }
+  .src-distilled { background: var(--tint-green); color: var(--green); }
+  .src-staging { background: var(--tint-orange); color: var(--orange); }
+  .calls { color: var(--orange); font-size: 11.5px; }
+
+  #stat-bar { display: flex; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; background: var(--panel); }
+  .stat2 { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; min-width: 92px; box-shadow: var(--shadow); }
+  .stat2 .v { font-size: 19px; font-weight: 700; color: var(--accent); }
+  .stat2 .k { font-size: 10.5px; color: var(--text2); }
+  #progress-wrap { flex: 1; min-width: 150px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; box-shadow: var(--shadow); }
+  #progress-bar { height: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; margin-top: 8px; }
+  #progress-fill { height: 100%; background: var(--green); width: 0%; border-radius: 999px; transition: width .5s; }
+  #workers { display: flex; gap: 10px; padding: 10px 16px 2px; flex-wrap: wrap; }
+  .wk { flex: 1; min-width: 180px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px 14px; font-size: 11.5px; box-shadow: var(--shadow); }
+  .wk .wk-id { color: var(--text2); font-size: 10.5px; }
+  .wk .wk-ch { color: var(--purple); font-weight: 600; }
+  .wk .wk-last { color: var(--text2); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lv-bubble { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; margin: 8px 0; white-space: pre-wrap; word-break: break-all; box-shadow: var(--shadow); }
+  .lv-tool { border-left: 3px solid var(--purple); background: var(--tint-purple); border-radius: 8px; padding: 5px 10px; margin: 6px 0; font-size: 12px; color: var(--purple); white-space: pre-wrap; word-break: break-all; }
+  .lv-result { border-left: 3px solid var(--blue); background: var(--tint-blue); border-radius: 8px; padding: 5px 10px; margin: 2px 0 8px; font-size: 11.5px; color: var(--text2); white-space: pre-wrap; word-break: break-all; }
+  .lv-line { color: var(--accent); font-size: 12px; margin: 4px 0; white-space: pre-wrap; word-break: break-all; }
+
+  footer { display: flex; gap: 8px; padding: 10px 16px; background: var(--panel); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border-top: 1px solid var(--border); }
+  footer input { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 999px; color: var(--text); padding: 8px 14px; font-size: 13px; outline: none; font-family: var(--font); }
+  footer input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--tint-blue); }
+  select { font-family: var(--font); }
+
+  /* ===== 项目化布局 ===== */
+  header nav { display: flex; gap: 6px; }
+  .navbtn { box-shadow: none; }
+  #brand { cursor: pointer; }
+  #app { flex: 1; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; }
+  .page { display: none; flex: 1; min-height: 0; }
+  .page.on { display: flex; flex-direction: column; }
+  #project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; padding: 12px 20px; }
+  .proj-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; cursor: pointer; box-shadow: var(--shadow); transition: transform .1s; min-height: 110px; position: relative; }
+  .del-btn { position: absolute; top: 10px; right: 10px; padding: 2px 9px; font-size: 11px; box-shadow: none; color: var(--text2); z-index: 2; }
+  .del-btn:hover { background: var(--tint-red); color: var(--red); }
+  .proj-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .proj-card .pname { font-size: 15px; font-weight: 600; padding-right: 36px; }
+  .proj-card .pmeta { color: var(--text2); font-size: 11.5px; margin-top: 6px; word-break: break-all; padding-right: 36px; }
+  .proj-card.new { display: flex; align-items: center; justify-content: center; color: var(--text2); font-size: 14px; border-style: dashed; }
+  #proj-head { display: flex; gap: 10px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--panel); flex-wrap: wrap; }
+  #proj-name { font-size: 16px; font-weight: 600; }
+  #proj-tabs { display: flex; gap: 6px; padding: 8px 20px; border-bottom: 1px solid var(--border); background: var(--panel); }
+  .ptab { font-size: 12.5px; padding: 5px 16px; box-shadow: none; }
+  .ptabview { display: none; flex: 1; min-height: 0; }
+  .ptabview.on { display: flex; }
+  #ptab-live { flex-direction: column; }
+  #ptab-live .live-row { flex: 1; display: flex; min-height: 0; }
+  #ptab-runs { flex-direction: column; overflow-y: auto; padding: 14px 20px; }
+  .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .modal-mask.on { display: flex; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 20px; width: 520px; max-width: 92vw; max-height: 86vh; overflow-y: auto; }
+  .modal h3 { font-size: 15px; margin-bottom: 12px; }
+  .type-opts { display: flex; gap: 10px; margin-bottom: 14px; }
+  .type-opt { flex: 1; border: 1px solid var(--border); border-radius: 12px; padding: 12px; cursor: pointer; font-size: 12.5px; }
+  .type-opt.sel { border-color: var(--accent); background: var(--tint-blue); }
+  .modal .f { margin-bottom: 10px; }
+  .modal label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 3px; }
+  .modal input, .modal textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 7px 10px; font-size: 12.5px; outline: none; font-family: var(--font); }
+  .run-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; padding-right: 40px; margin-bottom: 8px; cursor: pointer; font-size: 12.5px; box-shadow: var(--shadow); position: relative; }
+  .run-card:hover { border-color: var(--accent); }
+</style>
+</head>
+
+<body>
+<header>
+  <div class="lights"><i></i><i></i><i></i></div>
+  <h1 id="brand">邮宝</h1>
+  <nav>
+    <button class="navbtn" id="nav-home">项目</button>
+    <button class="navbtn" id="nav-tools">工具集</button>
+  </nav>
+  <span style="flex:1"></span>
+  <span id="status"></span>
+  <button id="btn-theme" title="切换主题">🌓</button>
+  <button id="btn-settings">⚙ 设置</button>
+  <div id="distill-bar"></div>
+  <div id="alert-bar"></div>
+  <div id="settings-panel">
+    <div id="settings-fields"></div>
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <button id="btn-save-config" class="primary">保存配置</button>
+      <span id="settings-msg" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+  </div>
+</header>
+
+<div id="app">
+  <!-- 主页:项目中心 -->
+  <div class="page on" id="page-home">
+    <div style="padding:16px 20px 0"><span class="side-h">项目</span></div>
+    <div id="project-grid"></div>
+    <div style="padding:8px 20px 0"><span class="side-h">历史运行(未归属项目)</span></div>
+    <div id="legacy-runs" style="padding:8px 20px 20px"></div>
+  </div>
+
+  <!-- 项目二级页 -->
+  <div class="page" id="page-project">
+    <div id="proj-head">
+      <button id="proj-back">← 项目</button>
+      <span id="proj-name"></span><span id="proj-type" class="src-tag"></span>
+      <span style="flex:1"></span>
+      <button id="btn-distill">工具整合</button>
+      <button id="btn-start" class="primary">启动</button>
+      <button id="btn-stop" class="danger">停止</button>
+    </div>
+    <div id="proj-tabs">
+      <button class="ptab on" data-tab="live">实时</button>
+      <button class="ptab" data-tab="runs">运行记录</button>
+    </div>
+
+    <div class="ptabview on" id="ptab-live">
+      <div id="stat-bar">
+        <div class="stat2"><div class="v" id="sb-score">0</div><div class="k">总分</div></div>
+        <div class="stat2"><div class="v" id="sb-time">-</div><div class="k">剩余时间</div></div>
+        <div class="stat2"><div class="v" id="sb-solved">0/0</div><div class="k">解题进度</div></div>
+        <div class="stat2"><div class="v" id="sb-round">0</div><div class="k">总轮次</div></div>
+        <div id="progress-wrap"><div style="font-size:10.5px;color:var(--text2)">进度</div><div id="progress-bar"><div id="progress-fill"></div></div></div>
+      </div>
+      <div id="workers"></div>
+      <div class="live-row">
+        <div id="log"></div>
+        <div id="side">
+          <div class="side-h">题目</div>
+          <div id="challenges">(暂无)</div>
+          <div class="side-h">跨题经验</div>
+          <div id="lessons">(暂无)</div>
+        </div>
+      </div>
+      <footer>
+        <input id="inject-text" placeholder="向运行中的 agent 注入指令(下一轮生效)…">
+        <button id="btn-inject">注入</button>
+      </footer>
+    </div>
+
+    <div class="ptabview" id="ptab-runs">
+      <div id="runs-content"></div>
+    </div>
+  </div>
+
+  <!-- 工具集页 -->
+  <div class="page" id="page-tools">
+    <div style="padding:16px 20px;overflow-y:auto;flex:1">
+      <div class="side-h">注册工具(调用 pentool 即用)</div>
+      <div id="tool-registered"></div>
+      <div class="side-h" style="margin-top:18px">临时工具(skills_staging/ 积累中,达阈值可整合)</div>
+      <div id="tool-staging"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 新建项目对话框 -->
+<div class="modal-mask" id="modal-mask">  <div class="modal">
+    <h3>新建项目</h3>
+    <div class="type-opts">
+      <div class="type-opt sel" data-type="benchmark"><b>跑分项目</b><div style="color:var(--text2);font-size:11px;margin-top:4px">接 TSec Benchmark 平台,按 token 跑整场题集</div></div>
+      <div class="type-opt" data-type="target"><b>普通靶场项目</b><div style="color:var(--text2);font-size:11px;margin-top:4px">只给一个目标 URL + 题目描述,单目标打靶</div></div>
+    </div>
+    <div class="f"><label>项目名</label><input id="np-name" placeholder="如:8月17日比赛第一轮"></div>
+    <div id="np-benchmark">
+      <div class="f"><label>BENCHMARK_TOKEN(留空则用全局 config.json)</label><input id="np-token" type="password"></div>
+      <div class="f"><label>BENCHMARK_BASE_URL</label><input id="np-base" placeholder="https://tsecbench.zc.tencent.com"></div>
+      <div class="f"><label>TASK_MINUTES(时限,分钟)</label><input id="np-min" placeholder="360"></div>
+      <div class="f"><label>MAX_CONCURRENT(并行 worker)</label><input id="np-conc" placeholder="3"></div>
+    </div>
+    <div id="np-target" style="display:none">
+      <div class="f"><label>目标 URL</label><input id="np-url" placeholder="http://10.0.1.5:8080"></div>
+      <div class="f"><label>题目描述</label><textarea id="np-desc" rows="3" placeholder="这是一个什么系统,可能有什么漏洞方向…"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button id="np-cancel">取消</button>
+      <button id="np-create" class="primary">创建</button>
+    </div>
+    <div id="np-msg" style="font-size:12px;color:var(--red);margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- 二次确认对话框(删除等破坏性操作) -->
+<div class="modal-mask" id="confirm-mask">
+  <div class="modal" style="width:400px">
+    <h3 id="confirm-title">确认操作</h3>
+    <div id="confirm-text" style="font-size:13px;color:var(--text2);line-height:1.6"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button id="confirm-no">取消</button>
+      <button id="confirm-yes" class="danger">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id)
+const api = (p, opt) => fetch(p, opt).then(r => r.json())
+const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
+
+// ---------- 二次确认弹窗 ----------
+function confirmDialog(text, title = '确认删除') {
+  return new Promise(resolve => {
+    $('confirm-title').textContent = title
+    $('confirm-text').textContent = text
+    $('confirm-mask').classList.add('on')
+    $('confirm-yes').onclick = () => { $('confirm-mask').classList.remove('on'); resolve(true) }
+    $('confirm-no').onclick = () => { $('confirm-mask').classList.remove('on'); resolve(false) }
+  })
+}
+
+// ---------- 主题切换 ----------
+const themeBtn = $('btn-theme')
+function applyTheme(t) { document.documentElement.setAttribute('data-theme', t); localStorage.setItem('nanopi-theme', t) }
+applyTheme(localStorage.getItem('nanopi-theme') || '')
+themeBtn.onclick = () => {
+  const cur = document.documentElement.getAttribute('data-theme')
+  const dark = cur === 'dark' || (!cur && matchMedia('(prefers-color-scheme: dark)').matches)
+  applyTheme(dark ? 'light' : 'dark')
+}
+
+// ---------- 路由 ----------
+let currentProject = null, currentRunId = null, currentChallenge = null, currentTab = 'transcript'
+function route() {
+  const h = location.hash || '#/'
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'))
+  if (h.startsWith('#/p/')) {
+    const id = h.split('/')[2]
+    $('page-project').classList.add('on')
+    if (!currentProject || currentProject.id !== id) loadProject(id)
+  } else if (h === '#/tools') {
+    $('page-tools').classList.add('on'); loadTools()
+  } else {
+    $('page-home').classList.add('on'); loadProjects()
+  }
+}
+window.addEventListener('hashchange', route)
+$('brand').onclick = () => location.hash = '#/'
+$('nav-home').onclick = () => location.hash = '#/'
+$('nav-tools').onclick = () => location.hash = '#/tools'
+
+// ---------- 主页:项目卡片 ----------
+async function loadProjects() {
+  const [projects, runs] = await Promise.all([api('/api/projects'), api('/api/runs')])
+  const grid = $('project-grid'); grid.innerHTML = ''
+  for (const p of projects) {
+    const div = document.createElement('div')
+    div.className = 'proj-card'
+    const meta = p.type === 'benchmark'
+      ? `跑分项目 · ${p.config.BENCHMARK_BASE_URL || '默认平台'}`
+      : `靶场 · ${p.config.url || ''}`
+    div.innerHTML = `<button class="del-btn">✕</button><div class="pname">${esc(p.name)}</div><div class="pmeta">${esc(meta)}</div>
+      <div class="pmeta">${p.created.slice(0, 10)} 创建</div>`
+    div.onclick = () => { location.hash = '#/p/' + p.id }
+    div.querySelector('.del-btn').onclick = async (e) => {
+      e.stopPropagation()
+      if (await confirmDialog(`删除项目「${p.name}」?项目的历史运行记录会保留。`)) {
+        await api('/api/projects/delete', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: p.id }) })
+        loadProjects()
+      }
+    }
+    grid.appendChild(div)
+  }
+  const add = document.createElement('div')
+  add.className = 'proj-card new'; add.textContent = '+ 新建项目'
+  add.onclick = openModal
+  grid.appendChild(add)
+  // 未归属项目的历史运行
+  const legacy = runs.filter(r => !r.project)
+  const lr = $('legacy-runs'); lr.innerHTML = legacy.length ? '' : '<span style="color:var(--text2);font-size:12px">(无)</span>'
+  for (const r of legacy) {
+    const div = document.createElement('div')
+    div.className = 'run-card'
+    div.innerHTML = `<button class="del-btn">✕</button><b>${esc(r.id)}</b> <span style="color:var(--text2)">${r.total_score} 分 · ${r.solved_count ?? '…'}/${r.challenge_count} 题 · ${r.duration_min ?? '…'}min</span>`
+    div.onclick = () => { lr.dataset.run = r.id; openLegacyRun(r.id) }
+    div.querySelector('.del-btn').onclick = async (e) => {
+      e.stopPropagation()
+      if (await confirmDialog(`删除运行记录 ${r.id}?该场次所有数据将被永久删除。`)) {
+        await api('/api/runs/delete', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: r.id }) })
+        loadProjects()
+      }
+    }
+    lr.appendChild(div)
+  }
+}
+function openLegacyRun(id) {
+  // 未归属运行借用项目页的 runs 视图展示
+  currentProject = null
+  $('page-home').classList.remove('on')
+  $('page-project').classList.add('on')
+  $('proj-name').textContent = '历史运行'
+  $('proj-type').textContent = ''
+  switchPtab('runs')
+  renderRunList(id)
+}
+
+// ---------- 新建项目 ----------
+let npType = 'benchmark'
+function openModal() { $('modal-mask').classList.add('on'); $('np-msg').textContent = '' }
+$('np-cancel').onclick = () => $('modal-mask').classList.remove('on')
+document.querySelectorAll('.type-opt').forEach(el => el.onclick = () => {
+  npType = el.dataset.type
+  document.querySelectorAll('.type-opt').forEach(x => x.classList.toggle('sel', x === el))
+  $('np-benchmark').style.display = npType === 'benchmark' ? '' : 'none'
+  $('np-target').style.display = npType === 'target' ? '' : 'none'
+})
+$('np-create').onclick = async () => {
+  const config = npType === 'benchmark'
+    ? { BENCHMARK_TOKEN: $('np-token').value.trim(), BENCHMARK_BASE_URL: $('np-base').value.trim(), TASK_MINUTES: $('np-min').value.trim(), MAX_CONCURRENT: $('np-conc').value.trim() }
+    : { url: $('np-url').value.trim(), description: $('np-desc').value.trim() }
+  const r = await api('/api/projects', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: $('np-name').value, type: npType, config }) })
+  if (r.error) { $('np-msg').textContent = r.error; return }
+  $('modal-mask').classList.remove('on')
+  location.hash = '#/p/' + r.id
+}
+
+// ---------- 项目二级页 ----------
+async function loadProject(id) {
+  const projects = await api('/api/projects')
+  currentProject = projects.find(p => p.id === id)
+  if (!currentProject) { location.hash = '#/'; return }
+  $('proj-name').textContent = currentProject.name
+  $('proj-type').textContent = currentProject.type === 'benchmark' ? '跑分' : '靶场'
+  switchPtab('live')
+}
+$('proj-back').onclick = () => { currentProject = null; location.hash = '#/' }
+document.querySelectorAll('.ptab').forEach(t => t.onclick = () => switchPtab(t.dataset.tab))
+function switchPtab(tab) {
+  document.querySelectorAll('.ptab').forEach(x => x.classList.toggle('on', x.dataset.tab === tab))
+  document.querySelectorAll('.ptabview').forEach(v => v.classList.remove('on'))
+  $('ptab-' + tab).classList.add('on')
+  if (tab === 'runs') renderRunList()
+}
+
+// ---------- 运行记录(按项目过滤) ----------
+async function renderRunList(preselectId) {
+  const runs = await api('/api/runs')
+  const mine = currentProject ? runs.filter(r => r.project && r.project.id === currentProject.id) : runs.filter(r => !r.project)
+  const el = $('runs-content')
+  el.innerHTML = '<div class="side-h">运行场次</div>'
+  for (const r of mine) {
+    const div = document.createElement('div')
+    div.className = 'run-card'
+    div.innerHTML = `<button class="del-btn">✕</button><b>${esc(r.id)}</b> <span style="color:var(--text2)">${r.total_score} 分 · ${r.solved_count ?? '…'}/${r.challenge_count} 题 · ${r.duration_min ?? '…'}min</span>`
+    div.onclick = () => openRun(r.id)
+    div.querySelector('.del-btn').onclick = async (e) => {
+      e.stopPropagation()
+      if (await confirmDialog(`删除运行记录 ${r.id}?该场次所有 rounds/transcript/日志将被永久删除。`)) {
+        await api('/api/runs/delete', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: r.id }) })
+        renderRunList()
+      }
+    }
+    el.appendChild(div)
+  }
+  if (!mine.length) el.innerHTML += '<div style="color:var(--text2);font-size:12px">(暂无运行)</div>'
+  if (preselectId) openRun(preselectId)
+}
+async function openRun(id) {
+  currentRunId = id
+  const { summary, state } = await api('/api/run?id=' + encodeURIComponent(id))
+  const s = summary ?? {}, st = state ?? {}
+  const el = $('runs-content')
+  el.innerHTML = `<button id="run-back">← 运行列表</button>
+    <div id="run-tabs" style="display:flex;gap:4px;margin:12px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+      <button class="tab on" data-tab="ch">题目</button>
+      <button class="tab" data-tab="log">事件日志</button>
+    </div>
+    <div id="run-tab-ch">
+      <div id="run-summary"></div>
+      <div class="side-h" style="margin-top:14px">题目(点击查看对话与 journal)</div>
+      <div id="ch-grid"></div>
+    </div>
+    <div id="run-tab-log" style="display:none;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-all"></div>`
+  $('run-back').onclick = () => renderRunList()
+  el.querySelectorAll('#run-tabs .tab').forEach(t => t.onclick = () => {
+    el.querySelectorAll('#run-tabs .tab').forEach(x => x.classList.toggle('on', x === t))
+    const isCh = t.dataset.tab === 'ch'
+    $('run-tab-ch').style.display = isCh ? '' : 'none'
+    $('run-tab-log').style.display = isCh ? 'none' : ''
+    if (!isCh) renderEventLog(id)
+  })
+  $('run-summary').innerHTML = [
+    ['总分', s.total_score ?? st.total_score ?? '-'], ['解题', `${s.solved_count ?? '-'} 题`],
+    ['tokens', s.total_tokens ?? '-'], ['耗时', (s.duration_min ?? '-') + ' min'],
+    ['经验沉淀', (s.experience_added ?? '-') + ' 条'],
+  ].map(([k, v]) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('')
+  const grid = $('ch-grid')
+  for (const c of Object.values(st.challenges ?? {})) {
+    const div = document.createElement('div')
+    div.className = 'ch-card ' + c.status
+    div.innerHTML = `<div><b>${c.code}</b><span class="tag">${c.status}</span><span class="tag">flag ${c.flags_found}/${c.flags_total}</span><span class="tag">+${c.score}</span></div>
+      <div class="desc">${esc(c.description ?? '')}</div>`
+    div.onclick = () => openChallenge(id, c)
+    grid.appendChild(div)
+  }
+}
+
+// ---------- 场次事件日志 ----------
+async function renderEventLog(runId) {
+  const el = $('run-tab-log')
+  el.innerHTML = '(加载中…)'
+  let recs
+  try {
+    recs = await api('/api/run/log?id=' + encodeURIComponent(runId))
+  } catch {
+    el.textContent = '无法读取该场次日志(可能已删除或损坏)。'
+    return
+  }
+  if (!Array.isArray(recs)) { el.textContent = '无法读取该场次日志(可能已删除或损坏)。'; return }
+  el.innerHTML = ''
+  if (!recs.length) { el.textContent = '该场次没有事件日志(早于日志功能上线或为空)。'; return }
+  for (const r of recs) {
+    const div = document.createElement('div')
+    const t = (r.ts ?? '').slice(11, 19)
+    if (r.type === 'log') div.innerHTML = `<span class="log-time">${t}</span> ${esc(r.text)}`
+    else if (r.type === 'alert') div.innerHTML = `<span class="log-time">${t}</span> <span class="log-alert">🚨 [${esc(r.challenge ?? '?')}] ${esc(r.message)}</span>`
+    else if (r.type === 'run_end') { const sm = r.summary ?? {}; div.innerHTML = `<span class="log-time">${t}</span> <span class="log-end">🏁 结束: ${sm.solved_count ?? '?'} 题 / ${sm.total_score ?? '?'} 分 / ${sm.total_tokens ?? '?'} tokens</span>` }
+    else if (r.type === 'tool_call') div.innerHTML = `<span class="log-time">${t}</span> <span class="log-tool">🔧 [w${esc(r.worker ?? '?')}] ${esc(r.name)} ${esc(r.preview ?? '')}</span>`
+    else if (r.type === 'tool_result') div.innerHTML = `<span class="log-time">${t}</span> <span class="log-result">↩ [w${esc(r.worker ?? '?')}] ${esc(r.name)}: ${esc(r.preview ?? '')}</span>`
+    el.appendChild(div)
+  }
+}
+
+// ---------- 题目详情 ----------
+async function openChallenge(runId, ch) {
+  currentChallenge = ch.code
+  const el = $('runs-content')
+  el.innerHTML = `<button id="ch-back2">← 返回题目列表</button>
+    <div id="ch-head" style="border:none;background:none;padding:10px 0">
+      <span class="title">${esc(ch.code)}</span>
+      <span style="font-size:12px;color:var(--text2)">${ch.status} · flag ${ch.flags_found}/${ch.flags_total} · +${ch.score} 分 · ${ch.rounds} 轮</span>
+    </div>
+    <div id="tabs" style="border:none;background:none;padding:0 0 8px">
+      <button class="tab ${currentTab === 'transcript' ? 'on' : ''}" data-tab="transcript">对话记录</button>
+      <button class="tab ${currentTab === 'rounds' ? 'on' : ''}" data-tab="rounds">journal 轮次</button>
+    </div>
+    <div id="ch-content"></div>`
+  $('ch-back2').onclick = () => openRun(runId)
+  el.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+    currentTab = t.dataset.tab
+    el.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t))
+    renderChallengeTab()
+  })
+  renderChallengeTab()
+}
+async function renderChallengeTab() {
+  const el = $('ch-content')
+  el.innerHTML = '(加载中…)'
+  const records = await api(`/api/run/challenge?id=${encodeURIComponent(currentRunId)}&code=${encodeURIComponent(currentChallenge)}&kind=${currentTab}`)
+  el.innerHTML = ''
+  if (!records.length) { el.innerHTML = '<div style="color:var(--text2)">(无记录)</div>'; return }
+  if (currentTab === 'transcript') {
+    let textBubble = null
+    for (const r of records) {
+      if (r.type === 'prompt') {
+        textBubble = null
+        const div = document.createElement('div')
+        div.innerHTML = `<div class="tt-round">第 ${r.round} 轮 · 指令</div>
+          <details class="tt-toolcard"><summary>本轮指令(点击展开)</summary><pre>${esc(r.content)}</pre></details>`
+        el.appendChild(div)
+      } else if (r.type === 'text') {
+        if (!textBubble) { textBubble = document.createElement('div'); textBubble.className = 'tt-bubble'; el.appendChild(textBubble) }
+        textBubble.textContent += r.delta
+      } else if (r.type === 'tool_call') {
+        textBubble = null
+        const div = document.createElement('details')
+        div.className = 'tt-toolcard'
+        div.innerHTML = `<summary>🔧 ${esc(r.name)}</summary><pre>${esc(JSON.stringify(r.args, null, 2))}</pre>`
+        el.appendChild(div)
+      } else if (r.type === 'tool_result') {
+        textBubble = null
+        const preview = String(r.result ?? '')
+        const div = document.createElement('details')
+        div.className = 'tt-toolcard result'
+        div.innerHTML = `<summary>↩ ${esc(r.name)} 返回(${preview.length} 字符)</summary><pre>${esc(preview)}</pre>`
+        el.appendChild(div)
+      }
+    }
+  } else {
+    const tl = document.createElement('div'); tl.className = 'tl'
+    records.forEach((r, idx) => {
+      const item = document.createElement('div')
+      item.className = 'tl-item'
+      item.innerHTML = `<div class="tl-dot ${r.progress ? 'ok' : 'no'}">${r.progress ? '✓' : '✗'}</div>
+        <div class="tl-card">
+          <div class="head"><b>第 ${idx + 1} 轮</b><span style="color:var(--text2);font-size:11px">${(r.ts ?? '').slice(11, 19)} · 全局 #${r.round}</span></div>
+          <div class="tl-field"><span class="tl-label">推理</span>${esc(r.thought)}</div>
+          <div class="tl-field"><span class="tl-label">假设</span>${esc(r.hypothesis)}</div>
+          <div class="tl-field"><span class="tl-label">动作</span>${(Array.isArray(r.actions) ? r.actions : (r.actions ? [r.actions] : [])).map(a => `<span class="tl-chip">${esc(a)}</span>`).join('') || '<span style="color:var(--text2)">无</span>'}</div>
+          <div class="tl-field"><span class="tl-label">观察</span><div class="tl-obs">${esc(r.observation)}</div></div>
+          ${r.finding ? `<div class="tl-field"><span class="tl-label">发现</span><div class="tl-find">${esc(r.finding)}</div></div>` : ''}
+          <div class="tl-field"><span class="tl-label">下一步</span>${esc(r.next_plan)}</div>
+        </div>`
+      tl.appendChild(item)
+    })
+    el.appendChild(tl)
+  }
+  el.scrollTop = 0
+}
+
+// ---------- 工具集 ----------
+async function loadTools() {
+  const d = await api('/api/tools')
+  const reg = $('tool-registered'); reg.innerHTML = ''
+
+  const all = [...d.builtin, ...d.distilled]
+  for (const t of all) {
+    const div = document.createElement('div')
+    div.className = 'tool-row'
+    const canDel = t.source === 'distilled'
+    div.innerHTML = `<div class="body"><span class="name">${esc(t.name)}</span><span class="src-tag src-${t.source}">${t.source === 'builtin' ? '内置' : '蒸馏'}</span><div style="margin-top:3px">${esc(t.purpose)}</div><div class="usage">${esc(t.usage)}</div></div><div class="acts"><span class="calls">调用 ${d.stats[t.name] ?? 0} 次</span>${canDel ? '<button class="del-btn">✕</button>' : ''}</div>`
+    if (canDel) div.querySelector('.del-btn').onclick = async () => {
+      if (await confirmDialog(`删除工具「${t.name}」?脚本与注册表条目都会被移除。`)) {
+        await api('/api/tools/delete', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: t.name }) })
+        loadTools()
+      }
+    }
+    reg.appendChild(div)
+  }
+  const generic = Object.entries(d.stats).filter(([n]) => !all.some(t => t.name === n))
+  if (generic.length) {
+    const h = document.createElement('div')
+    h.className = 'side-h'; h.style.marginTop = '14px'; h.textContent = '通用工具调用'
+    reg.appendChild(h)
+    for (const [name, n] of generic.sort((a, b) => b[1] - a[1])) {
+      const div = document.createElement('div')
+      div.className = 'tool-row'
+      div.innerHTML = `<div class="body"><span class="name">${esc(name)}</span><span class="src-tag src-builtin">内置</span></div><div class="acts"><span class="calls">调用 ${n} 次</span></div>`
+      reg.appendChild(div)
+    }
+  }
+  const st = $('tool-staging')
+  st.innerHTML = d.staging.length ? '' : '<div style="color:var(--text2)">(暂无积累)</div>'
+  for (const f of d.staging) {
+    const div = document.createElement('div')
+    div.className = 'tool-row'
+    div.innerHTML = `<div class="body"><span class="name">${esc(f)}</span><span class="src-tag src-staging">临时</span></div>
+      <div class="acts">
+        <button class="del-staging" style="padding:2px 10px;font-size:11px;box-shadow:none">✕</button>
+      </div>`
+    div.querySelector('.del-staging').onclick = async () => {
+      if (await confirmDialog(`删除临时脚本 ${f}?`)) {
+        await api('/api/tools/staging/delete', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ file: f }) })
+        loadTools()
+      }
+    }
+    st.appendChild(div)
+  }
+}
+
+// ---------- 实时流 ----------
+const logEl = $('log')
+let lastBubble = null
+function scrollLog() { logEl.scrollTop = logEl.scrollHeight }
+function lvLine(cls, text) {
+  lastBubble = null
+  const div = document.createElement('div')
+  div.className = cls; div.textContent = text
+  logEl.appendChild(div); scrollLog()
+}
+function lvText(delta) {
+  if (!lastBubble) { lastBubble = document.createElement('div'); lastBubble.className = 'lv-bubble'; logEl.appendChild(lastBubble) }
+  lastBubble.textContent += delta; scrollLog()
+}
+const workers = {}
+function updWorker(w, ch, last) {
+  if (!w) return
+  workers[w] = { ch: ch ?? workers[w]?.ch ?? '', last }
+  const el = $('workers'); el.innerHTML = ''
+  for (const id of Object.keys(workers).sort()) {
+    const div = document.createElement('div')
+    div.className = 'wk'
+    div.innerHTML = `<span class="wk-id">worker ${id}</span> <span class="wk-ch">${esc(workers[id].ch || '空闲')}</span><div class="wk-last">${esc(workers[id].last || '')}</div>`
+    el.appendChild(div)
+  }
+}
+const es = new EventSource('/events')
+es.onopen = () => $('status').textContent = '已连接'
+es.onerror = () => $('status').textContent = '连接断开,重连中…'
+es.onmessage = (m) => {
+  const ev = JSON.parse(m.data)
+  if (ev.type === 'assistant_text') { lvText(ev.delta); updWorker(ev.worker, ev.challenge, '推理中…') }
+  else if (ev.type === 'log') { lvLine('lv-line', ev.text); const wm = ev.text.match(/^\[w(\d+)\] (.+)/); if (wm) updWorker(wm[1], null, wm[2].slice(0, 80)) }
+  else if (ev.type === 'tool_call') { lvLine('lv-tool', `🔧 ${ev.name} ${ev.preview}`); updWorker(ev.worker, ev.challenge, `🔧 ${ev.name}`) }
+  else if (ev.type === 'tool_result') { lvLine('lv-result', `↩ ${ev.name}: ${ev.preview}`); updWorker(ev.worker, ev.challenge, `↩ ${ev.name} 返回`) }
+  else if (ev.type === 'alert') showAlert(ev)
+  else if (ev.type === 'done') lvLine('lv-line', `[distill] ${ev.message}`)
+  else if (ev.type === 'status' || ev.type === 'error') lvLine('lv-line', `[server] ${ev.message}`)
+  else if (ev.type === 'run_end') { lvLine('lv-line', `🏁 结束: ${ev.summary.solved_count} 题 / ${ev.summary.total_score} 分 / ${ev.summary.total_tokens} tokens`); for (const k of Object.keys(workers)) delete workers[k]; $('workers').innerHTML = '' }
+}
+
+// ---------- 告警 ----------
+function showAlert(ev) {
+  const bar = $('alert-bar')
+  bar.style.display = 'block'
+  bar.innerHTML = `🚨 [${esc(ev.challenge)}] ${esc(ev.message)} — 等待人类决策(超时自动跳过)`
+  const c = document.createElement('button'); c.textContent = '继续本题'
+  c.onclick = () => answer(ev.id, 'continue')
+  const s = document.createElement('button'); s.textContent = '跳过本题'; s.className = 'danger'
+  s.onclick = () => answer(ev.id, 'skip')
+  bar.appendChild(c); bar.appendChild(s)
+}
+async function answer(id, decision) {
+  $('alert-bar').style.display = 'none'
+  await api('/api/answer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, decision }) })
+}
+
+// ---------- 控制 ----------
+$('btn-start').onclick = async () => {
+  if (!currentProject) return
+  const r = await api('/api/start', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ projectId: currentProject.id }) })
+  if (r.error) lvLine('lv-line', `[start 失败] ${r.error}`)
+}
+$('btn-stop').onclick = () => fetch('/api/stop', { method: 'POST' })
+$('btn-distill').onclick = async () => {
+  const r = await api('/api/distill', { method: 'POST' })
+  if (r.error) lvLine('lv-line', `[distill 失败] ${r.error}`)
+}
+// 横幅本身也可点击(主页没有按钮,横幅就是入口)
+$('distill-bar').onclick = () => $('btn-distill').click()
+$('btn-inject').onclick = async () => {
+  const text = $('inject-text').value.trim(); if (!text) return
+  $('inject-text').value = ''
+  await api('/api/inject', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) })
+}
+$('inject-text').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-inject').click() })
+
+// ---------- 设置 ----------
+$('btn-settings').onclick = async () => {
+  const panel = $('settings-panel')
+  if (panel.style.display === 'block') { panel.style.display = 'none'; return }
+  const { fields, values } = await api('/api/config')
+  $('settings-fields').innerHTML = ''
+  for (const f of fields) {
+    const div = document.createElement('div'); div.className = 'cfg'
+    div.innerHTML = `<label>${f.label} <span style="color:var(--text2)">${f.key}</span></label>`
+    const input = document.createElement('input')
+    input.id = 'cfg-' + f.key; input.type = f.secret ? 'password' : 'text'
+    input.placeholder = f.placeholder ?? ''; input.value = values[f.key] ?? ''
+    div.appendChild(input); $('settings-fields').appendChild(div)
+  }
+  $('settings-msg').textContent = ''; panel.style.display = 'block'
+}
+$('btn-save-config').onclick = async () => {
+  const body = {}
+  for (const el of $('settings-fields').querySelectorAll('input')) body[el.id.slice(4)] = el.value
+  const r = await api('/api/config', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+  $('settings-msg').textContent = r.ok ? '✓ 已保存到 config.json,下次启动跑分生效' : `保存失败: ${r.error ?? ''}`
+}
+
+// ---------- 轮询 ----------
+async function pollState() {
+  try {
+    const s = await api('/api/state')
+    const chs = Object.values(s.challenges ?? {})
+    const solved = chs.filter(c => c.status === 'solved').length
+    const done = chs.filter(c => c.status !== 'active').length
+    $('sb-score').textContent = s.total_score ?? 0
+    $('sb-time').textContent = s.deadline ? Math.max(0, Math.round((new Date(s.deadline) - Date.now()) / 60000)) + ' min' : '-'
+    $('sb-solved').textContent = `${solved}/${chs.length}`
+    $('sb-round').textContent = s.round ?? 0
+    $('progress-fill').style.width = chs.length ? `${Math.round(done / chs.length * 100)}%` : '0%'
+    $('challenges').innerHTML = chs.length ? '' : '(暂无)'
+    for (const c of chs) {
+      const div = document.createElement('div')
+      div.className = 'ch ' + c.status
+      div.innerHTML = `${c.code} <span class="tag">${c.status}</span><span class="tag">flag ${c.flags_found}/${c.flags_total}</span><span class="tag">+${c.score}</span>`
+      if (c.findings?.length) div.innerHTML += `<div style="color:var(--text2);margin-top:4px">${c.findings.slice(-3).map(esc).join('<br>')}</div>`
+      $('challenges').appendChild(div)
+    }
+    $('lessons').innerHTML = (s.lessons ?? []).map(l => `<div class="ch">${esc(l)}</div>`).join('') || '(暂无)'
+  } catch {}
+}
+async function pollStaging() {
+  try {
+    const s = await api('/api/staging')
+    const bar = $('distill-bar')
+    // 项目页已有「工具整合」按钮,横幅只在其他页面显示,避免重复入口
+    if (s.count >= s.threshold && !s.distilling && !$('page-project').classList.contains('on')) {
+      bar.style.display = 'block'
+      bar.textContent = `🛠 已积累 ${s.count} 个临时脚本——点击此条启动工具整合`
+    } else bar.style.display = 'none'
+    $('btn-distill').textContent = `工具整合(${s.count})`
+    $('btn-distill').disabled = s.distilling
+    $('btn-start').disabled = s.running
+    $('btn-stop').disabled = !s.running
+  } catch {}
+}
+setInterval(pollState, 3000); pollState()
+setInterval(pollStaging, 5000); pollStaging()
+route()
+</script>
+</body>
+</html>

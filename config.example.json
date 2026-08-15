@@ -1,0 +1,12 @@
+{
+  "NANOPI_API_KEY": "sk-...",
+  "NANOPI_BASE_URL": "https://api.deepseek.com",
+  "NANOPI_MODEL": "deepseek-v4-flash",
+  "BENCHMARK_TOKEN": "",
+  "BENCHMARK_BASE_URL": "https://tsecbench.zc.tencent.com",
+  "TASK_MINUTES": "360",
+  "STALL_ROUNDS": "6",
+  "MAX_ROUNDS": "30",
+  "ALERT_TIMEOUT_SEC": "120",
+  "VPN_CHECK": "http://10.0.100.58"
+}
