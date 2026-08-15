@@ -1,0 +1,16 @@
+digraph round {
+  graph [rankdir=TB, bgcolor="white", pad=0.3, nodesep=0.4, ranksep=0.55, fontname="PingFang SC"];
+  node [shape=box, style="rounded,filled", fontname="PingFang SC", fontsize=12, margin="0.15,0.10", color="#4a4a4a"];
+  edge [color="#6b6b6b", penwidth=1.2, arrowsize=0.8, fontname="PingFang SC", fontsize=10];
+
+  snap   [label="① 注入状态快照\ntask · 容器 · 剩余时间 · lessons", fillcolor="#e3edf7"];
+  reason [label="② LLM 推理\n产出思考 + tool_call", fillcolor="#e8e8e8"];
+  act    [label="③ pentool 执行\n渗透工具 / 自写脚本", fillcolor="#e2f0e2"];
+  obs    [label="④ 观察结果\n写入 rounds.jsonl", fillcolor="#f7e6e6"];
+  judge  [label="⑤ 是否拿到 flag ?", shape=diamond, fillcolor="#fff3c4", margin="0.05,0.02"];
+  report [label="⑥ journal 汇报得分\n进入下一题", fillcolor="#fdf0e0"];
+
+  snap -> reason -> act -> obs -> judge;
+  judge -> snap [label="否 · 更新快照继续循环"];
+  judge -> report [label="是"];
+}

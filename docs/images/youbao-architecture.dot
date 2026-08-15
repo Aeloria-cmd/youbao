@@ -1,0 +1,31 @@
+digraph youbao {
+  graph [rankdir=LR, bgcolor="white", pad=0.3, nodesep=0.45, ranksep=0.7, splines=ortho, fontname="PingFang SC"];
+  node  [shape=box, style="rounded,filled", fontname="PingFang SC", fontsize=13, margin="0.18,0.12", color="#4a4a4a", penwidth=1.2];
+  edge  [color="#6b6b6b", penwidth=1.2, arrowsize=0.8, fontname="PingFang SC", fontsize=10];
+
+  subgraph cluster_outer {
+    label="外层 · 确定性 Task Manager";
+    fontsize=12; fontname="PingFang SC"; style="rounded,dashed"; color="#b08968";
+    tm [label="选题调度\n容器生命周期\n时限控制 · 停滞告警", fillcolor="#fdf0e0"];
+  }
+
+  subgraph cluster_inner {
+    label="内层 · LLM ReAct 循环";
+    fontsize=12; fontname="PingFang SC"; style="rounded,dashed"; color="#6a8eae";
+    react [label="状态快照注入\n推理 → 工具行动\njournal 结构化汇报", fillcolor="#e3edf7"];
+  }
+
+  llm [label="LLM\n(OpenAI 兼容 API)", fillcolor="#e8e8e8"];
+  pentool [label="pentool 统一工具注册表\nffuf · nmap · nuclei · sqlmap\nwhatweb · 自定义蒸馏工具", fillcolor="#e2f0e2"];
+  memory [label="三层记忆\nstate.json 当前快照\nrounds.jsonl 全量审计\nlessons 跨题经验", fillcolor="#f7e6e6"];
+  webui [label="Web UI\n实时事件流 · 停滞决策\n指令注入 · 工具整合蒸馏", fillcolor="#efe6f7"];
+  bench [label="TSec Benchmark 靶场\n(经宿主机 VPN / NAT)", fillcolor="#fff3c4"];
+
+  tm -> react [label="下发任务"];
+  react -> tm [label="得分 / 停滞上报"];
+  react -> llm [dir=both, label="prompt / stream"];
+  react -> pentool [label="工具调用"];
+  pentool -> bench [label="探测 · 利用"];
+  react -> memory [dir=both, label="读取 / 落盘"];
+  webui -> tm [dir=both, label="事件流 / 人工干预"];
+}
