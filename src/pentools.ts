@@ -84,6 +84,11 @@ export const BUILTIN_PENTOOLS: PenToolEntry[] = [
   },
 ]
 
+/** 各注册表文件最近一次成功解析出的蒸馏条目快照。
+ *  蒸馏改写 registry.json 不是原子操作,运行中的 pentool 调用可能读到半截 JSON——
+ *  此时回退到最近一次成功快照,自定义工具不瞬断(2026-08-15 复盘) */
+const lastGoodCustomByFile = new Map<string, PenToolEntry[]>()
+
 /** 加载合并后的注册表:内置 + 蒸馏(自定义注册表损坏/冲突的条目跳过) */
 export async function loadRegistry(customFile: string = CUSTOM_REGISTRY): Promise<PenToolEntry[]> {
   const registry = [...BUILTIN_PENTOOLS]
@@ -94,22 +99,27 @@ export async function loadRegistry(customFile: string = CUSTOM_REGISTRY): Promis
     return registry // 文件不存在 = 还没有蒸馏工具
   }
   let custom: unknown
-  try { custom = JSON.parse(raw) } catch { return registry }
-  if (!Array.isArray(custom)) return registry
+  try { custom = JSON.parse(raw) } catch { custom = undefined }
+  if (!Array.isArray(custom)) {
+    const cached = lastGoodCustomByFile.get(customFile)
+    return cached ? [...registry, ...cached] : registry
+  }
 
+  const customs: PenToolEntry[] = []
   for (const item of custom as Partial<PenToolEntry>[]) {
     const valid = item && typeof item.name === 'string' && typeof item.command === 'string'
       && (item.kind === 'binary' || item.kind === 'script')
       && typeof item.purpose === 'string' && typeof item.usage === 'string'
     if (!valid) continue
     if (registry.some(e => e.name === item.name)) continue // 不允许覆盖已有条目
-    registry.push({
+    customs.push({
       name: item.name!, kind: item.kind!, command: item.command!, source: 'distilled',
       purpose: item.purpose!, usage: item.usage!,
       timeout: typeof item.timeout === 'number' ? item.timeout : 120,
     })
   }
-  return registry
+  lastGoodCustomByFile.set(customFile, customs)
+  return [...registry, ...customs]
 }
 
 // ===== 工具增删(工具集页面用) =====
