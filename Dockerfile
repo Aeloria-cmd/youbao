@@ -45,6 +45,24 @@ RUN set -e; \
 # SecLists 常用路径字典(宿主预下载,同 build-assets 方案)
 COPY build-assets/common.txt /opt/wordlists/common.txt
 
+# 凭证/口令字典:多阶段题的内网喷洒、SSH/DB/OA 爆破用(2026-08-15 复盘:b-03 内网阶段因
+# 容器内无词表只喷了 31 个密码)。均为仓库自带小字典,构建不解网。
+COPY build-assets/wordlists/passwords-top.txt /opt/wordlists/passwords-top.txt
+COPY build-assets/wordlists/usernames-top.txt /opt/wordlists/usernames-top.txt
+COPY build-assets/wordlists/creds-common.txt /opt/wordlists/creds-common.txt
+# 兼容历史引用路径(脚本里曾硬编码 /opt/wordlists/ssh-passwords.txt 等)
+RUN ln -sf /opt/wordlists/passwords-top.txt /opt/wordlists/ssh-passwords.txt \
+    && ln -sf /opt/wordlists/passwords-top.txt /opt/wordlists/mysql-passwords.txt \
+    && ln -sf /opt/wordlists/passwords-top.txt /opt/wordlists/wp-passwords.txt
+
+# 横向/隧道工具:构建前在宿主运行 bash build-assets/fetch-pivot-tools.sh [arm64|amd64] 填充;
+# 目录里只有 README 时此步为空操作
+COPY build-assets/pivot /tmp/pivot
+RUN set -e; mkdir -p /opt/pivot; \
+    for f in /tmp/pivot/*; do \
+      case "$f" in *.md) ;; *) [ -f "$f" ] && cp "$f" /opt/pivot/ && chmod +x "/opt/pivot/$(basename "$f")" || true;; esac; \
+    done; rm -rf /tmp/pivot
+
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci

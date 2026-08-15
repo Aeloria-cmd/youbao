@@ -60,8 +60,17 @@ async function compactContext(model: Model, context: Context, signal?: AbortSign
     .join('\n')
 
   // 用一轮非流式调用让 LLM 总结
+  // 摘要必须保住链式状态:渗透链条(立足点/凭证/拓扑)丢了等于本题重来——
+  // 2026-08-15 复盘:压缩后 recon 重做、hint 重复兑换、忘记已有 webshell,是多阶段题失分主因之一
   const summaryContext: Context = {
-    systemPrompt: '请将以下对话总结为简洁的上下文摘要，保留关键决策、已做的工作和待办事项。',
+    systemPrompt: '请将以下渗透测试对话总结为简洁的上下文摘要。必须完整保留:'
+      + '1) 当前题目 code 与目标地址(env_addrs);'
+      + '2) 已建立的访问能力:webshell 完整 URL 与参数、凭证(用户/密码/密钥)、会话 cookie;'
+      + '3) 已发现的内网拓扑:主机 IP/端口/服务/指纹;'
+      + '4) 已确认有效的 payload 与绕过手法;'
+      + '5) 已排除的死路(试过且失败的方向,避免重做);'
+      + '6) 当前假设与下一步计划。'
+      + '宁长勿丢:上述六类信息一条都不能省,其余过程性内容可压缩。',
     messages: [{ role: 'user', content: conversationText }],
   }
 

@@ -28,10 +28,14 @@ export type RoundRecord = {
   actions: string[]
   /** Observe：服务器 / 工具的关键返回 */
   observation: string
-  /** 本轮是否有实质进展（新端点 / 新凭证 / 新漏洞迹象 / 新 flag） */
+  /** 本轮是否有实质进展（新端点 / 新凭证 / 新漏洞迹象 / 新 flag / 新立足点） */
   progress: boolean
   /** 有进展时的具体发现，会沉淀进快照的 findings 列表（跨 compaction 存活） */
   finding?: string
+  /** 新建立的访问能力（webshell URL / 凭证 / 会话），沉淀进快照的 access 列表（跨 compaction 存活） */
+  access?: string
+  /** 新发现的内网主机/服务，沉淀进快照的 internal_hosts 列表（跨 compaction 存活） */
+  internal_hosts?: string
   /** 可跨题复用的经验（某类 payload 有效 / 某 WAF 特征），进入全局 lessons */
   lesson?: string
   /** 下一步计划 */
@@ -50,6 +54,12 @@ export type ChallengeState = {
   /** 连续无进展轮数 —— 停滞告警的依据 */
   no_progress: number
   findings: string[]
+  /** 战果簿：已建立的访问能力（webshell/凭证/会话）。多阶段题的链条状态，每轮注入快照 */
+  access: string[]
+  /** 已发现的内网主机/服务拓扑，每轮注入快照 */
+  internal_hosts: string[]
+  /** 已兑换的 hint 文本（缓存，防止 compaction 后重复兑换重复扣分） */
+  hint?: string
 }
 
 export type AlertRecord = {
@@ -124,8 +134,22 @@ export class StateStore {
     this.state.challenges[code] = {
       code, status: 'active', addr, description,
       flags_found: 0, flags_total: flagsTotal, score: 0,
-      rounds: 0, no_progress: 0, findings: [],
+      rounds: 0, no_progress: 0, findings: [], access: [], internal_hosts: [],
     }
+    return this.save()
+  }
+
+  /** 环境地址刷新：容器重建后 IP 会变，runner 每轮从平台 list 同步 */
+  updateAddr(code: string, addr: string[]): Promise<void> {
+    const ch = this.state.challenges[code]
+    if (ch) ch.addr = addr
+    return this.save()
+  }
+
+  /** 缓存已兑换的 hint（compaction 后模型不记得换过，重复兑换会重复扣分） */
+  setHint(code: string, hint: string): Promise<void> {
+    const ch = this.state.challenges[code]
+    if (ch) ch.hint = hint
     return this.save()
   }
 
@@ -137,6 +161,8 @@ export class StateStore {
     ch.rounds += 1
     ch.no_progress = rec.progress ? 0 : ch.no_progress + 1
     if (rec.finding && !ch.findings.includes(rec.finding)) ch.findings.push(rec.finding)
+    if (rec.access && !ch.access.includes(rec.access)) ch.access.push(rec.access)
+    if (rec.internal_hosts && !ch.internal_hosts.includes(rec.internal_hosts)) ch.internal_hosts.push(rec.internal_hosts)
     if (rec.lesson && !this.state.lessons.includes(rec.lesson)) this.state.lessons.push(rec.lesson)
 
     const full: RoundRecord = {
