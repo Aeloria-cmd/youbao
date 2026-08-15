@@ -1,45 +1,92 @@
-# PI from Scratch
+<div align="center">
+  <img src="./web/public/og.png" alt="PI from Scratch：从零手撕一个 Coding Agent" width="720">
+
+  <h1>PI from Scratch</h1>
+
+  <p>
+    从零手写一个能读文件、改代码、执行命令的 TypeScript Coding Agent<br>
+    删掉工程细节，留下核心思想 —— 5 个文件，600+ 行代码
+  </p>
+
+  <p>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+    <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+    <img src="https://img.shields.io/badge/Node.js-%E2%89%A522-339933?logo=node.js&logoColor=white" alt="Node.js >= 22">
+    <img src="https://img.shields.io/badge/PRs-Welcome-brightgreen.svg" alt="PRs Welcome">
+  </p>
+
+  <p>
+    <a href="#-快速开始">快速开始</a> ·
+    <a href="#-核心架构">核心架构</a> ·
+    <a href="#-邮宝-youbao安全攻防-agent">邮宝 YouBao</a> ·
+    <a href="https://pi-from-scratch.vercel.app">在线阅读</a>
+  </p>
+</div>
+
+---
+
+## ✨ 项目简介
+
+本项目沿着 [pi](https://github.com/earendil-works/pi) 的数据流拆解：**需要什么、造什么**，所有组件都符合直觉。
+
+- 📖 **一篇文章，不是一本书** —— 配套教学网站把文章和源码放在一起，阅读推进时右侧编辑器逐步补全代码，看完文章，nano-pi 的完整代码也呈现在你眼前
+- 🐞 **Trace 跟踪调试** —— 可以打断点逐行过代码，逐帧理解 agent 的执行流
+- 🧩 **极简内核** —— `cli` / `tui` / `agent` / `tools` / `llm` 五个模块，无黑盒、无魔法
+- 🛡️ **二次开发实例** —— 在 nano-pi 内核之上构建了面向安全靶场的自主渗透 agent「邮宝 YouBao」，证明这个内核能承载真实负载
+
+## 🧠 核心架构
+
+五个模块，职责单一，依赖方向清晰：
 
 <p align="center">
-  <a href="https://pi-from-scratch.vercel.app">
-    <img src="./web/public/og.png" alt="PI from Scratch：从零手撕一个 Coding Agent" width="80%">
-  </a>
+  <img src="./web/public/figures/module-architecture.png" alt="模块架构：cli.ts 负责 wiring，tui/tools/agent/llm 各司其职" width="640">
 </p>
 
-从零手写一个能读文件、改代码、执行命令的 TypeScript coding agent。
+Agent 的本质是一个循环：问 LLM → 有 `tool_call` 就执行工具 → 把结果塞回上下文 → 再问，直到没有工具调用为止。
 
-项目沿着 [pi](https://github.com/earendil-works/pi) 的数据流拆解，需要什么、我们造什么，所有组件都是符合直觉的。
+<p align="center">
+  <img src="./web/public/figures/agent-loop.png" alt="Agent 循环：ask LLM → tool_call → execute tool → tool_result → context" width="560">
+</p>
 
-删除 pi 的工程细节，留下 pi 的核心思想。
+数据在系统内的完整流动 —— 上下文、流式事件、工具执行与 UI 渲染各走各的通道：
 
-放轻松，这是一篇文章，不是一本书，你会很容易看懂。
+<p align="center">
+  <img src="./web/public/figures/agent-data-flow.png" alt="数据流：Context → stream() → StreamEvent → agent → AgentEvent → UI" width="720">
+</p>
 
-网站把文章和源码放在一起。阅读推进时，右侧编辑器会逐步补全代码，当你看完的时候，nano-pi 的代码也会全部呈现在编辑器中。
+一次用户输入的完整往返（输入 → Agent 循环 → 输出与持久化）：
 
-同时设计了一个 Trace 跟踪，可以打断点逐行过代码，希望能帮助大家理解代码执行流。
+<p align="center">
+  <img src="./web/public/figures/full-roundtrip.png" alt="完整往返：user → Tui → CLI → Context → agent loop → screen / session.jsonl" width="720">
+</p>
 
-[在线阅读 PI from Scratch](https://pi-from-scratch.vercel.app)
+## 🚀 快速开始
 
-> 文章保留古法手敲，尽可能没有ai味，希望大家读的开心。
-
-## 运行 nano-pi
-
-需要 Node.js 22 或更高版本，以及一个 OpenAI 兼容 API。
+需要 **Node.js 22+** 和一个 OpenAI 兼容 API。
 
 ```bash
+git clone https://github.com/Aeloria-cmd/pi-from-scratch.git
+cd pi-from-scratch
 npm install
+
 export NANOPI_API_KEY=your-api-key
-npm run dev
+npm run dev          # 直接以 tsx 运行 nano-pi
 ```
 
 可选环境变量：
 
-- `NANOPI_MODEL`：模型名
-- `NANOPI_BASE_URL`：OpenAI 兼容接口地址，默认 `https://api.openai.com/v1`
+| 变量 | 说明 | 默认值 |
+| --- | --- | --- |
+| `NANOPI_MODEL` | 模型名 | 视服务商而定 |
+| `NANOPI_BASE_URL` | OpenAI 兼容接口地址 | `https://api.openai.com/v1` |
 
-线上 trace 是预先生成的静态数据，浏览网站不会发起模型请求。
+构建为可执行产物：
 
-## 本地运行教学网站
+```bash
+npm run build        # tsc → dist/，提供 pi-from-scratch 命令入口
+```
+
+## 🌐 本地运行教学网站
 
 ```bash
 cd web
@@ -47,49 +94,31 @@ npm install
 npm run dev
 ```
 
-## Thanks
+线上 trace 是预生成的静态数据，浏览网站不会发起任何模型请求。
 
-- 感谢 [OpenModel](https://www.openmodel.ai?ref=JGDNqZl8) 为本项目提供 API 测试支持。OpenModel 提供稳定可靠的 AI API 和生产级 SLA 保障，一个接口即可调用 50+ 主流模型，并可直接用于 Claude Code、Codex，以及你刚刚亲手做好的 nano-pi 😈。
-- 感谢 [Cubence](https://cubence.com/signup?code=SC3M1CAH&source=ccscli) 对本项目的赞助。Cubence 自 2025 年 9 月起提供稳定高效的 API 中转服务，兼容 OpenAI 与 Anthropic 协议，可直接接入 Codex、Claude Code、pi 和 oh-my-pi 等主流编程工具。
-- 感谢 [pi-book](https://books.antinomie.org/pi/) 带来的启发，为本项目从零实现 nano-pi 提供了不少思路和参考。如果你想在完成 nano-pi 后继续深入理解 pi，这本书很值得读。
+## 🛡️ 邮宝 YouBao（安全攻防 Agent）
 
-## Star History
+在原版 nano-pi 内核之上，二次开发了面向 TSec Benchmark 靶场的自主渗透 agent：
 
-<p align="center">
-  <a href="https://www.star-history.com/#SaladDay/pi-from-scratch&amp;Date">
-    <img src="https://api.star-history.com/chart?repos=SaladDay%2Fpi-from-scratch&amp;type=date&amp;legend=top-left&amp;sealed_token=zEX_hDx767RuvD8h02AAC8PQvRcc5HyRIrKXaM5IoysJtPVPUhY8x-JjF6a1XFnUN1acFyB111JWBmLFh6yzfhmk6sbPo3EXlz2VPf6UXxM7iUtALO3wYvU3zj9u3Xmj8CleWffL6e7wzGJ7k7K2kOHcAzc8gOTwZqmrxObgmuKUJC2aEV1vygRPnnwP" width="560" alt="Star History Chart">
-  </a>
-</p>
-
-## License
-
-[MIT](LICENSE)
-
----
-
-## 邮宝 YouBao —— 安全攻防 agent(基于 nano-pi 二次开发)
-
-在原版 nano-pi 内核之上,二次开发了一个面向 TSec Benchmark 靶场的自主渗透 agent:
-
-- **ReAct 双层架构**:外层确定性 Task Manager(选题/容器生命周期/时限/停滞告警),内层 LLM ReAct 循环(状态快照注入 → 推理 → 工具行动 → journal 结构化汇报)。
-- **三层记忆**:`runs/<ts>/state.json`(每轮注入的当前快照)+ `rounds.jsonl`(全量可审计轮次记录)+ `lessons`(跨题经验)。
-- **统一渗透工具注册表**(`pentool`):内置开源工具 ffuf/nmap/nuclei/sqlmap/whatweb(Docker 镜像携带);agent 自写脚本积累在 `skills_staging/`,可在 Web UI 一键触发"工具整合"蒸馏成新的注册工具。
-- **Web UI 人机交互**:实时事件流、状态面板、停滞告警决策(继续/跳过)、指令注入。
-- **指标自采集**:token 成本、每题耗时、得分、告警记录,自动落盘 `summary.json`。
+- **ReAct 双层架构** —— 外层确定性 Task Manager（选题 / 容器生命周期 / 时限 / 停滞告警），内层 LLM ReAct 循环（状态快照注入 → 推理 → 工具行动 → journal 结构化汇报）
+- **三层记忆** —— `runs/<ts>/state.json`（每轮注入的当前快照）+ `rounds.jsonl`（全量可审计轮次记录）+ lessons（跨题经验）
+- **统一渗透工具注册表**（`pentool`）—— 内置 ffuf / nmap / nuclei / sqlmap / whatweb（Docker 镜像携带）；agent 自写脚本可在 Web UI 一键「工具整合」，蒸馏成新的注册工具
+- **Web UI 人机交互** —— 实时事件流、状态面板、停滞告警决策（继续 / 跳过）、指令注入
+- **指标自采集** —— token 成本、每题耗时、得分、告警记录，自动落盘 `summary.json`
 
 ### 使用
 
 ```bash
 npm install
-cp config.example.json config.json   # 填入 NANOPI_API_KEY / BENCHMARK_TOKEN(也可用 Web UI 设置页)
+cp config.example.json config.json   # 填入 NANOPI_API_KEY / BENCHMARK_TOKEN（也可在 Web UI 设置页配置）
 
 npm run sec            # CLI 无人值守跑分
-npm run web            # Web UI: http://localhost:8080(右上角 ⚙ 设置可直接改 config.json)
+npm run web            # Web UI: http://localhost:8080
 ```
 
-配置优先级:`config.json` > 环境变量 > 默认值(`.env`/shell 导出的同名变量仍可作兜底)。
+配置优先级：`config.json` > 环境变量 > 默认值。
 
-### Docker(内置渗透工具,零安装)
+### Docker（内置渗透工具，零安装）
 
 ```bash
 docker build -t youbao .
@@ -100,14 +129,32 @@ docker run -p 8080:8080 --env-file .env \
   youbao
 ```
 
-二次开发新增代码:`src/runner.ts`(驱动器)、`src/state.ts`(状态库)、`src/sec_tools.ts`(benchmark/journal 工具)、`src/pentools.ts`(工具注册表)、`src/distill.ts`(工具蒸馏)、`src/webui.ts` + `webui/`(Web UI)。
+> 镜像构建所需的离线资产（ffuf / nuclei / nuclei-templates）已随仓库携带于 `build-assets/`，当前为 linux_arm64 版本；amd64 构建请替换其中文件。容器流量默认经宿主机 NAT 转发，宿主机连上靶场 VPN 后容器即可直达靶机。
 
-### 容器网络与靶场 VPN(实测)
+二次开发新增代码：`src/runner.ts`（驱动器）、`src/state.ts`（状态库）、`src/sec_tools.ts`（benchmark / journal 工具）、`src/pentools.ts`（工具注册表）、`src/distill.ts`（工具蒸馏）、`src/webui.ts` + `webui/`（Web UI）。
 
-OrbStack 下容器可共享宿主机网络:bridge 默认 NAT 与 `--network host` 两种模式,容器内 `ping baidu.com` 均通(已实测)。连上靶场 VPN 后,容器流量经宿主机 NAT 进 VPN 隧道,大概率可直接访问靶机。复核命令:
+## 📁 项目结构
 
-```bash
-docker run --rm youbao curl -s --max-time 5 http://10.0.100.58   # 连 VPN 后应返回 {"status":"ok",...}
+```
+├── src/               # nano-pi 内核 + 邮宝二次开发（agent / tools / llm / runner / pentools ...）
+├── web/               # 教学网站（Next.js）：文章 + 渐进式代码编辑器 + Trace 调试
+│   └── public/figures # 本文档引用的架构图
+├── webui/             # 邮宝 Web UI 前端
+├── pentools/          # 渗透工具注册表与自定义工具目录
+├── playbooks/         # 渗透 playbook 知识库
+├── experience/        # 跨题经验（lessons）
+├── scripts/           # trace 生成等辅助脚本
+├── build-assets/      # Docker 构建期离线资产（ffuf / nuclei / 模板）
+├── docs/              # 模块与循环详解文档
+└── Dockerfile         # Web UI + 跑分内核 + 渗透工具一体化镜像
 ```
 
-不通的降级路径:改用 host 网络(docker-compose.yml 注释行)→ 再不通则宿主机直跑 `npm run web`,镜像仅作交付物。
+## 🙏 致谢
+
+- [pi](https://github.com/earendil-works/pi) —— 本项目的数据流与核心思想来源
+- [SaladDay/pi-from-scratch](https://github.com/SaladDay/pi-from-scratch) —— 本项目基于其 MIT 许可的原始作品二次开发，教学网站与架构图亦出自原作
+- [pi-book](https://books.antinomie.org/pi/) —— 想在做完 nano-pi 后继续深入理解 pi，这本书很值得读
+
+## 📄 License
+
+本项目基于 MIT 许可证发布，原始版权归 SaladDay 所有，详见 [LICENSE](LICENSE)。
