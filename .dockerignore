@@ -9,3 +9,5 @@ web
 config.json
 projects.json
 tool-stats.json
+*.tar.gz
+__pycache__
