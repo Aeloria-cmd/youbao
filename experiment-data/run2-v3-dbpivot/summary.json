@@ -1,0 +1,26 @@
+{
+  "finished_at": "2026-08-15T11:33:01.048Z",
+  "total_score": 0,
+  "project": {
+    "id": "p-dvwa-exp1",
+    "name": "dvwa-web-exp",
+    "type": "target"
+  },
+  "solved": [
+    "dvwa-web-exp"
+  ],
+  "abandoned": [],
+  "solved_count": 1,
+  "total_tokens": 238384,
+  "tokens_by_challenge": {
+    "dvwa-web-exp": 238384
+  },
+  "tool_calls": {
+    "run_bash": 27,
+    "pentool": 2,
+    "journal": 1
+  },
+  "experience_added": 2,
+  "duration_min": 2,
+  "state_dir": "runs/2026-08-15T11-30-47-470Z"
+}

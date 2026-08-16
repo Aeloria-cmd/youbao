@@ -1,0 +1,32 @@
+{
+  "started_at": "2026-08-15T11:03:54.774Z",
+  "deadline": "2026-08-15T17:03:54.775Z",
+  "total_score": 0,
+  "round": 1,
+  "lessons": [
+    "DVWA 类靶场先以默认凭证 admin/password 登录并确认安全级别，再选一个能直达 RCE 的模块（Command Injection/Upload/LFI）比逐个枚举文件高效；flag 常放容器根目录 /flag.txt"
+  ],
+  "challenges": {
+    "dvwa-web-exp": {
+      "code": "dvwa-web-exp",
+      "status": "solved",
+      "addr": [
+        "http://dvwa"
+      ],
+      "description": "目标是部署在本地 Docker 网络中的 DVWA (Damn Vulnerable Web Application) 渗透训练靶场。已知靶场中藏有 flag{...} 格式的旗帜，可能位于 Web 目录之外的文件系统路径，或应用使用的数据库中。请按标准渗透流程作业：服务侦察 → Web 指纹与目录枚举 → 认证突破 → 漏洞利用 → 读取 flag。找到任意一个 flag 写入 journal 的 finding 字段即算通关。",
+      "flags_found": 0,
+      "flags_total": 1,
+      "score": 0,
+      "rounds": 1,
+      "no_progress": 0,
+      "findings": [
+        "flag{dvwa_fi1e_1nclusi0n_pwn3d}"
+      ]
+    }
+  },
+  "project": {
+    "id": "p-dvwa-exp1",
+    "name": "dvwa-web-exp",
+    "type": "target"
+  }
+}

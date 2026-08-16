@@ -1,0 +1,32 @@
+{
+  "started_at": "2026-08-15T11:30:47.472Z",
+  "deadline": "2026-08-15T17:30:47.472Z",
+  "total_score": 0,
+  "round": 1,
+  "lessons": [
+    "DVWA 默认 DB 凭证 dvwa:p@ssw0rd 可直连数据库；setup.php 是信息泄露金矿（泄露 DB 主机/用户/库名）。靶场里 MySQL 端口可能直接对外暴露，绕过 Web 认证直达数据层。flag 名暗示出题意图是 medium 级 SQLi UNION 注入，但攻击路径不唯一。"
+  ],
+  "challenges": {
+    "dvwa-web-exp": {
+      "code": "dvwa-web-exp",
+      "status": "solved",
+      "addr": [
+        "http://dvwa"
+      ],
+      "description": "目标是部署在本地 Docker 网络中的 DVWA (Damn Vulnerable Web Application) 渗透训练靶场。已知靶场中藏有 flag{...} 格式的旗帜，可能位于 Web 目录之外的文件系统路径，或应用使用的数据库中。请按标准渗透流程作业：服务侦察 → Web 指纹与目录枚举 → 认证突破 → 漏洞利用 → 读取 flag。找到任意一个 flag 写入 journal 的 finding 字段即算通关。",
+      "flags_found": 0,
+      "flags_total": 1,
+      "score": 0,
+      "rounds": 1,
+      "no_progress": 0,
+      "findings": [
+        "flag{sqli_uni0n_dump_m3d1um_2026}"
+      ]
+    }
+  },
+  "project": {
+    "id": "p-dvwa-exp1",
+    "name": "dvwa-web-exp",
+    "type": "target"
+  }
+}

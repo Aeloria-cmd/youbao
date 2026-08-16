@@ -40,7 +40,14 @@
 - `rounds-<code>.jsonl`：全量可审计的轮次日志，支撑赛后复盘与实验分析；
 - `experience/<domain>.jsonl`：跨题目持久化的经验库。
 
-**工具系统** 分四部分：内置基础工具（run_bash / write_file / edit）；benchmark 对接工具（`src/sec_tools.ts`，提交 flag、journal 结构化汇报）；pentool 统一注册表（`src/pentools.ts`，封装 ffuf、nmap、nuclei、sqlmap、whatweb，定义存于 `pentools/`）；以及工具蒸馏机制（`src/distill.ts`）：Agent 解题过程中自写的脚本积累在 `skills_staging/`，达到阈值后可蒸馏为新的注册工具，实现工具集的自扩展。
+**工具系统（工具聚合层）** 是 Agent 与靶场之间的全部能力出口，采用「一个注册表、统一调用约定」的聚合设计（`src/pentools.ts`），分四部分：
+
+- **内置基础工具**：`run_bash`（受限 shell）、`write_file`、`edit`（`src/tools.ts`），覆盖通用的命令执行与文件操作；
+- **benchmark 对接工具**（`src/sec_tools.ts`）：提交 flag、journal 结构化汇报等，与 TSec 平台语义对齐（多 flag 进度以平台 `correct_flag_count` 为准，重复提交幂等）；
+- **pentool 统一注册表**：所有渗透工具——无论是 ffuf、nmap、nuclei、sqlmap、whatweb、ROPgadget、pwntools 这类镜像内置的开源二进制（`source: builtin`），还是蒸馏产出的 Python 脚本（`source: distilled`，存于 `pentools/custom/`）——都以同构条目登记：`{name, kind, command, purpose, usage, timeout}`。LLM 只看到一张扁平的工具清单和一句话用途/用法示例，通过统一的 `pentool` 工具入口按名调用，输出经截断后回灌上下文。这种「声明式条目 + 单一入口」的设计让新增工具对 Agent 完全透明：蒸馏产出一个新工具，等于注册表里多一行 JSON，prompt、调度、UI 零改动。注册表读取带容错——`registry.json` 被并发写坏（torn read）时自动回退到最近一次完好的副本，避免一次坏写击穿整个工具层；
+- **工具蒸馏管道**（`src/distill.ts`）：Agent 解题时自写的临时脚本沉淀到 `skills_staging/`，积累到阈值（默认 5 个）后触发蒸馏——开启一个独立的 LLM 会话，逐个审阅 staging 脚本并结合近期 `rounds.jsonl` 的实战场景，把有共性的能力蒸馏成一个通用工具登记进注册表（一次只产一个，宁缺毋滥，质量不达标则明确报告本轮无产出）。蒸馏过程同样走事件流，Web UI 可实时围观。目前已产出 `flask_session_forge`（Flask session 伪造/弱密钥爆破）、`xxe_read_probe`（XXE 文件读取 + WAF 绕过）等实战工具。
+
+经验层解决「知识复用」，蒸馏层解决「能力复用」：前者让 Agent 记得怎么打，后者让 Agent 手里有打过的武器，二者共同构成跨场次的能力积累闭环。
 
 **人机协作（`src/webui.ts` + `webui/`）** 提供实时事件流、状态面板、停滞告警决策（继续/换题/放弃）、指令注入（inbox 队列）和在线配置修改，使 Agent 在「无人值守」与「人在环路」两种模式间平滑切换。
 
@@ -66,7 +73,7 @@ LLM 擅长漏洞分析与利用构造，但不擅长预算管理与全局调度�
 
 ### 3.4 工具蒸馏（Tool Distillation）
 
-Agent 解题时编写的临时脚本沉淀到 `skills_staging/`；积累达到阈值后触发蒸馏，将通用脚本固化为 pentool 注册表中的正式工具。经验层解决「知识复用」，蒸馏层解决「能力复用」，二者共同使 Agent 越用越强。
+蒸馏的具体管道见 2 节工具系统。其方法论要点在于：蒸馏由**独立 LLM 会话**执行，输入同时包含 staging 脚本原文与近期轮次日志（即脚本被写出来时的实战场景），并要求「一次只产一个、宁缺毋滥」——没有共性或质量不达标时允许零产出。这把「能力积累」从无脑堆脚本变成了有门禁的抽象过程，注册表只沉淀可复用的通用能力。
 
 ### 3.5 预算感知的多题调度
 

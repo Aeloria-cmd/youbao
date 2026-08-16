@@ -1,0 +1,2 @@
+{"ts":"2026-08-15T12:02:16.753Z","challenge":"dvwa-web-exp","kind":"error","message":"LLM 连续 3 轮报错: 单轮超时(480s),强制收束","rounds":3}
+{"ts":"2026-08-15T12:02:16.755Z","challenge":"dvwa-web-exp","kind":"abandoned","message":"未解出,已换题","rounds":3}

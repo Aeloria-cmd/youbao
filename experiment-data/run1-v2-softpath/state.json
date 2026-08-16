@@ -1,0 +1,32 @@
+{
+  "started_at": "2026-08-15T11:16:26.380Z",
+  "deadline": "2026-08-15T17:16:26.381Z",
+  "total_score": 0,
+  "round": 2,
+  "lessons": [
+    "1) 全盘 grep/find 重型命令会把靶场容器 CPU 打满，导致 PHP session 文件锁死、带 cookie 请求全部超时——恢复方法：换全新 session 重新登录。2) 服务器无 mysql 客户端时，用 PHP mysqli 脚本(base64 传输避免引号转义)直连数据库是最稳的 DB 侦察方式。3) Authorization header 在无 SetEnvIf 的 php-fpm 下到不了 $_SERVER['HTTP_AUTHORIZATION']，需先验证 header 传递再谈 bearer 鉴权。4) DVWA medium exec 过滤 && 和 ;，用 | 分隔命令即可。"
+  ],
+  "challenges": {
+    "dvwa-web-exp": {
+      "code": "dvwa-web-exp",
+      "status": "solved",
+      "addr": [
+        "http://dvwa"
+      ],
+      "description": "目标是部署在本地 Docker 网络中的 DVWA (Damn Vulnerable Web Application) 渗透训练靶场。已知靶场中藏有 flag{...} 格式的旗帜，可能位于 Web 目录之外的文件系统路径，或应用使用的数据库中。请按标准渗透流程作业：服务侦察 → Web 指纹与目录枚举 → 认证突破 → 漏洞利用 → 读取 flag。找到任意一个 flag 写入 journal 的 finding 字段即算通关。",
+      "flags_found": 0,
+      "flags_total": 1,
+      "score": 0,
+      "rounds": 2,
+      "no_progress": 0,
+      "findings": [
+        "flag{sqli_uni0n_dump_m3d1um_2026}"
+      ]
+    }
+  },
+  "project": {
+    "id": "p-dvwa-exp1",
+    "name": "dvwa-web-exp",
+    "type": "target"
+  }
+}
