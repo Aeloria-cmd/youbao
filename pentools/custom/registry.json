@@ -1,83 +1,20 @@
 [
   {
-    "name": "fcgi_client",
+    "name": "flask_session_forge",
     "kind": "script",
-    "command": "pentools/custom/fcgi_client.py",
+    "command": "pentools/custom/flask_session_forge.py",
     "source": "distilled",
-    "purpose": "通用 FastCGI 客户端：向暴露的 PHP-FPM/FastCGI 端口发请求，支持 PHP_VALUE auto_prepend_file 注入实现 RCE，并可探测端口是否为 FastCGI 服务",
-    "usage": "python3 pentools/custom/fcgi_client.py --host <host> --port 9000 --script /var/www/html/index.php --cmd 'id'",
+    "purpose": "Flask session cookie 伪造与弱密钥/载荷爆破: 用候选 SECRET_KEY 离线伪造 cookie 并探测目标, 非 302 响应视为命中",
+    "usage": "python3 pentools/custom/flask_session_forge.py --keys keys.txt --payload '{\"is_admin\":true}' --url http://TARGET/admin/flag",
     "timeout": 120
   },
   {
-    "name": "ssrf_sweep",
+    "name": "xxe_read_probe",
     "kind": "script",
-    "command": "pentools/custom/ssrf_sweep.py",
+    "command": "pentools/custom/xxe_read_probe.py",
     "source": "distilled",
-    "purpose": "通用 SSRF 中继工具: 通过存在 SSRF 的 Web 端点(接收 target_url 并回显抓取结果)对内网做单点探测 probe / host×port 端口扫描 scan / 路径爆破 pathbrute, 自动解析回显状态、响应头、响应体并按 OPEN/FILTER/PRIVATE/REFUSED/TIMEOUT/DNSFAIL 分类",
-    "usage": "python3 pentools/custom/ssrf_sweep.py scan --ssrf-url http://target/probe --hosts '%69nternal-api,web' --ports 80,443,5000,8000-8010 --cookie-jar /tmp/ck.txt",
-    "timeout": 120
-  },
-  {
-    "name": "cookie_jar",
-    "kind": "script",
-    "command": "pentools/custom/cookie_jar.py",
-    "source": "distilled",
-    "purpose": "Netscape cookie jar 解析与转换: 读浏览器/curl -c 导出的 jar, 按域名/路径/名称/过期过滤, 输出 Cookie 头值(供 curl -b/requests/ffuf -b)、完整头、requests 兼容 JSON 或规范化 jar 再导出",
-    "usage": "python3 pentools/custom/cookie_jar.py /tmp/ck.txt --domain example.com --name session --format header",
-    "timeout": 120
-  },
-  {
-    "name": "pathgen",
-    "kind": "script",
-    "command": "pentools/custom/pathgen.py",
-    "source": "distilled",
-    "purpose": "语义化 Web 端点候选生成器: 由 动作词×资源词×API位置前缀×扩展名 组合生成去重排序的隐藏端点/接口候选列表(含 .php/.json 扩展规则与根级特殊文件), 输出可直接喂给 ffuf/curl 爆破器",
-    "usage": "python3 pentools/custom/pathgen.py --verbs approve,audit --nouns contract,flag --locations ',api/,admin/' --out /tmp/endpoints.txt && ffuf -w /tmp/endpoints.txt -u http://target/FUZZ",
-    "timeout": 120
-  },
-  {
-    "name": "lineprobe",
-    "kind": "script",
-    "command": "pentools/custom/lineprobe.py",
-    "source": "distilled",
-    "purpose": "TCP 行协议服务交互探测与命令发现: exec 模式在同一连接按行发命令读响应(探测已知协议), discover 模式对候选命令表逐条开连接发送并用拒绝特征正则分类 ACCEPT/REJECT(枚举未知协议可用命令集)",
-    "usage": "python3 pentools/custom/lineprobe.py --host 10.0.177.18 --port 9011 --cmds 'PING,ECHO hi,QUIT'  # exec;  --discover --cands 'PING,SET,GET'  # 命令发现",
-    "timeout": 120
-  },
-  {
-    "name": "elfinspect",
-    "kind": "script",
-    "command": "pentools/custom/elfinspect.py",
-    "source": "distilled",
-    "purpose": "纯标准库 ELF 侦察工具(反汇编前): 解析 ELF 头/节区表, 提取可打印字符串并映射虚拟地址(支持按节区/ALLOC过滤、最小长度), 列出符号表函数名——替代系统 strings 与 capstone 反汇编前的字符串定位步骤",
-    "usage": "python3 pentools/custom/elfinspect.py --strings --section .rodata --vaddr /path/to/binary;  --sections 列节区;  --symbols 列符号;  --alloc-only 只取已加载节区",
-    "timeout": 120
-  },
-  {
-    "name": "fnvkeygen",
-    "kind": "script",
-    "command": "pentools/custom/fnvkeygen.py",
-    "source": "distilled",
-    "purpose": "FNV-1a32 哈希 preimage/keygen 工具: 给定逆向分析中遇到的校验值(串号/授权码检查), 在 字符集×长度×固定前缀 约束下用 meet-in-the-middle 求逆找到能通过校验的可打印 key(碰撞多解全部输出, 均经完整正向验证)",
-    "usage": "python3 pentools/custom/fnvkeygen.py --target 0xe868c44d --charset alnum_dash --prefix A3-07- --maxlen 6;  --selftest 本地自检",
-    "timeout": 120
-  },
-  {
-    "name": "tcpsweep",
-    "kind": "script",
-    "command": "pentools/custom/tcpsweep.py",
-    "source": "distilled",
-    "purpose": "行协议服务数值参数扫描器: 对 TCP 行协议命令中的数值参数(offset/长度等)逐值开新连接发送并提取首行特征响应, 支持预置命令与相邻值变化检测(changed-only 输出边界点), 用于找缓冲区边界/长度上限/越界读触发点",
-    "usage": "python3 pentools/custom/tcpsweep.py --host 10.0.177.16 --port 9014 --template 'COPY {n} A' --start 1000 --end 1040 --changed-only;  --values 8,16,4096 --prelude 'SETPAYLOAD A' --fmt x;  --selftest 本地自检",
-    "timeout": 120
-  },
-  {
-    "name": "hbscan",
-    "kind": "script",
-    "command": "pentools/custom/hbscan.py",
-    "source": "distilled",
-    "purpose": "heartbeat 风格 OOB 越界读扫描/泄漏提取: 对行协议 TCP 服务(SETPAYLOAD 写短载荷 + HEARTBEAT <len> 声称大长度回显)逐 (载荷,长度) 开新连接探测, 切出回显体并统计非载荷非零字节/首个越界偏移/可打印串/flag 与自定义正则, 报告每个载荷的泄漏 onset 与泄漏内容",
-    "usage": "python3 pentools/custom/hbscan.py --host 10.0.177.18 --port 9011 --set-cmd 'SETPAYLOAD {payload}' --hb-cmd 'HEARTBEAT {n}' --payloads 'A,flag' --lengths 64,512,4096,4352,65535;  --search 'SECRET[0-9A-F]+' --min-nonz 8;  --selftest 本地自检",
+    "purpose": "XXE 任意文件读取探测/利用: php://filter base64 实体读文件 + UTF-16 BOM 绕 WAF, 支持单路径与词表组合并行爆破",
+    "usage": "python3 pentools/custom/xxe_read_probe.py --url http://TARGET/api.php?endpoint=import --header 'X-Admin-Key: secret' --dirs-file dirs.txt --names-file names.txt --threads 20",
     "timeout": 120
   }
 ]
