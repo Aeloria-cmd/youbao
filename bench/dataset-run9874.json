@@ -1,0 +1,1050 @@
+{
+ "meta": {
+  "run_id": "run-9874",
+  "start": "2026-08-16 00:39:18",
+  "horizon_min": 350.8,
+  "workers": 3,
+  "task_minutes": 360,
+  "hint_cost_ratio": 0.1,
+  "total_points_actual": 12860,
+  "solved_actual": 26,
+  "pass2_empirical_order": [
+   "bctf-32",
+   "bctf-11",
+   "bctf-26",
+   "bctf-36",
+   "bctf-02",
+   "bctf-22",
+   "bctf-27",
+   "bctf-23",
+   "bctf-34"
+  ]
+ },
+ "challenges": [
+  {
+   "code": "bctf-04",
+   "name": "FileBox 文件管理器",
+   "attempts": [
+    {
+     "start_min": 0.0,
+     "fail_offsets": [],
+     "points": 200,
+     "solve_min": 11.9,
+     "duration_min": 12.2,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 0,
+   "total_points": 200,
+   "hint_used": false,
+   "nominal_score": 200,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-38",
+   "name": "你的桶，我的桶",
+   "attempts": [
+    {
+     "start_min": 0.0,
+     "fail_offsets": [],
+     "points": 180,
+     "solve_min": 22.48,
+     "duration_min": 22.88,
+     "solved": true
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 21.78,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 1,
+   "total_points": 180,
+   "hint_used": true,
+   "nominal_score": 200,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-09",
+   "name": "Sentinel 代码审计Agent",
+   "attempts": [
+    {
+     "start_min": 0.016666666666666666,
+     "fail_offsets": [],
+     "points": 200,
+     "solve_min": 3.08,
+     "duration_min": 11.87,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 2,
+   "total_points": 200,
+   "hint_used": false,
+   "nominal_score": 200,
+   "score_estimated": false,
+   "flag_count": 3
+  },
+  {
+   "code": "bctf-07",
+   "name": "InterviewAI 面试训练",
+   "attempts": [
+    {
+     "start_min": 11.883333333333333,
+     "fail_offsets": [],
+     "points": 250,
+     "solve_min": 9.17,
+     "duration_min": 9.45,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 3,
+   "total_points": 250,
+   "hint_used": false,
+   "nominal_score": 250,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-11",
+   "name": "CloudDB 多租户数据库",
+   "attempts": [
+    {
+     "start_min": 12.65,
+     "fail_offsets": [
+      1.4,
+      13.48,
+      19.62,
+      21.03,
+      21.93,
+      22.32,
+      23.48,
+      28.9,
+      34.62,
+      34.62
+     ],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 35.9,
+     "solved": false
+    },
+    {
+     "start_min": 285.25,
+     "fail_offsets": [],
+     "points": 270,
+     "solve_min": 2.47,
+     "duration_min": 3.0,
+     "solved": true
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 24.07,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 4,
+   "total_points": 270,
+   "hint_used": true,
+   "nominal_score": 300,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-16",
+   "name": "DocHub 目录穿越",
+   "attempts": [
+    {
+     "start_min": 21.35,
+     "fail_offsets": [],
+     "points": 300,
+     "solve_min": 1.1,
+     "duration_min": 1.5,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 5,
+   "total_points": 300,
+   "hint_used": false,
+   "nominal_score": 300,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-26",
+   "name": "DocMind 文档解析助手",
+   "attempts": [
+    {
+     "start_min": 22.95,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 36.53,
+     "solved": false
+    },
+    {
+     "start_min": 285.45,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 41.9,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 39.73,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 6,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 500,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-31",
+   "name": "FlowLab 进程囚笼",
+   "attempts": [
+    {
+     "start_min": 22.983333333333334,
+     "fail_offsets": [],
+     "points": 300,
+     "solve_min": 5.23,
+     "duration_min": 5.72,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 7,
+   "total_points": 300,
+   "hint_used": false,
+   "nominal_score": 300,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-32",
+   "name": "Rusty Bank v3",
+   "attempts": [
+    {
+     "start_min": 28.7,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 30.97,
+     "solved": false
+    },
+    {
+     "start_min": 285.0,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 0.33,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 45.63,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 8,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 500,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-37",
+   "name": "会话金库",
+   "attempts": [
+    {
+     "start_min": 48.56666666666667,
+     "fail_offsets": [],
+     "points": 300,
+     "solve_min": 3.28,
+     "duration_min": 3.6,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 9,
+   "total_points": 300,
+   "hint_used": false,
+   "nominal_score": 300,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-40",
+   "name": "AI 前端生成沙箱",
+   "attempts": [
+    {
+     "start_min": 52.28333333333333,
+     "fail_offsets": [],
+     "points": 300,
+     "solve_min": 0.67,
+     "duration_min": 0.77,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 10,
+   "total_points": 300,
+   "hint_used": false,
+   "nominal_score": 300,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-36",
+   "name": "ezSpring",
+   "attempts": [
+    {
+     "start_min": 53.06666666666667,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 6.6,
+     "solved": false
+    },
+    {
+     "start_min": 288.25,
+     "fail_offsets": [],
+     "points": 315,
+     "solve_min": 25.52,
+     "duration_min": 28.63,
+     "solved": true
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 63.18,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 11,
+   "total_points": 315,
+   "hint_used": true,
+   "nominal_score": 350,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-39",
+   "name": "存档金库",
+   "attempts": [
+    {
+     "start_min": 59.68333333333333,
+     "fail_offsets": [],
+     "points": 350,
+     "solve_min": 3.83,
+     "duration_min": 5.08,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 12,
+   "total_points": 350,
+   "hint_used": false,
+   "nominal_score": 350,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-02",
+   "name": "Casino",
+   "attempts": [
+    {
+     "start_min": 64.76666666666667,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 40.13,
+     "solved": false
+    },
+    {
+     "start_min": 308.96666666666664,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 18.37,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 327.8,
+     "attempt_idx": 1
+    }
+   ],
+   "empirical_order": 13,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 600,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-03",
+   "name": "BuzzHub 娱乐社区",
+   "attempts": [
+    {
+     "start_min": 65.91666666666667,
+     "fail_offsets": [],
+     "points": 400,
+     "solve_min": 11.05,
+     "duration_min": 11.4,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 14,
+   "total_points": 400,
+   "hint_used": false,
+   "nominal_score": 400,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-05",
+   "name": "FlashMemo 闪记笔记",
+   "attempts": [
+    {
+     "start_min": 77.33333333333333,
+     "fail_offsets": [],
+     "points": 400,
+     "solve_min": 5.23,
+     "duration_min": 5.48,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 15,
+   "total_points": 400,
+   "hint_used": false,
+   "nominal_score": 400,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-10",
+   "name": "SnapFlow 图片工具",
+   "attempts": [
+    {
+     "start_min": 82.83333333333333,
+     "fail_offsets": [],
+     "points": 450,
+     "solve_min": 2.68,
+     "duration_min": 2.95,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 16,
+   "total_points": 450,
+   "hint_used": false,
+   "nominal_score": 450,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-20",
+   "name": "神秘购物商店",
+   "attempts": [
+    {
+     "start_min": 85.78333333333333,
+     "fail_offsets": [],
+     "points": 500,
+     "solve_min": 4.45,
+     "duration_min": 4.77,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 17,
+   "total_points": 500,
+   "hint_used": false,
+   "nominal_score": 500,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-22",
+   "name": "Federation Vault",
+   "attempts": [
+    {
+     "start_min": 90.41666666666667,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 40.0,
+     "solved": false
+    },
+    {
+     "start_min": 316.9,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 10.43,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 338.33,
+     "attempt_idx": 1
+    }
+   ],
+   "empirical_order": 18,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 700,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-27",
+   "name": "墨记轻博客",
+   "attempts": [
+    {
+     "start_min": 90.65,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 41.1,
+     "solved": false
+    },
+    {
+     "start_min": 327.45,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 23.35,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 108.87,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 19,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 500,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-19",
+   "name": "深链接保险库",
+   "attempts": [
+    {
+     "start_min": 104.91666666666667,
+     "fail_offsets": [],
+     "points": 630,
+     "solve_min": 27.8,
+     "duration_min": 32.18,
+     "solved": true
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 126.23,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 20,
+   "total_points": 630,
+   "hint_used": true,
+   "nominal_score": 700,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-21",
+   "name": "EasyShop 点赞注入",
+   "attempts": [
+    {
+     "start_min": 130.43333333333334,
+     "fail_offsets": [],
+     "points": 630,
+     "solve_min": 33.98,
+     "duration_min": 34.37,
+     "solved": true
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 146.85,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 21,
+   "total_points": 630,
+   "hint_used": true,
+   "nominal_score": 700,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-23",
+   "name": "HELM Deploy Console",
+   "attempts": [
+    {
+     "start_min": 131.95,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 35.47,
+     "solved": false
+    },
+    {
+     "start_min": 344.26666666666665,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 6.53,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 152.32,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 22,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 600,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-33",
+   "name": "BaiduPass 统一认证门户",
+   "attempts": [
+    {
+     "start_min": 137.1,
+     "fail_offsets": [],
+     "points": 700,
+     "solve_min": 1.0,
+     "duration_min": 1.32,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 23,
+   "total_points": 700,
+   "hint_used": false,
+   "nominal_score": 700,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-29",
+   "name": "组合购整数溢出零元购",
+   "attempts": [
+    {
+     "start_min": 138.43333333333334,
+     "fail_offsets": [],
+     "points": 750,
+     "solve_min": 1.78,
+     "duration_min": 1.98,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 24,
+   "total_points": 750,
+   "hint_used": false,
+   "nominal_score": 750,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-30",
+   "name": "伪造支付回调白嫖会员",
+   "attempts": [
+    {
+     "start_min": 140.43333333333334,
+     "fail_offsets": [],
+     "points": 750,
+     "solve_min": 8.62,
+     "duration_min": 8.92,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 25,
+   "total_points": 750,
+   "hint_used": false,
+   "nominal_score": 750,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-34",
+   "name": "AURORA Studio",
+   "attempts": [
+    {
+     "start_min": 149.36666666666667,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 36.22,
+     "solved": false
+    },
+    {
+     "start_min": 348.8333333333333,
+     "fail_offsets": [
+      1.97
+     ],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 1.97,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 160.97,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 26,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 600,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-06",
+   "name": "HealthTrack 健康追踪",
+   "attempts": [
+    {
+     "start_min": 164.8,
+     "fail_offsets": [],
+     "points": 800,
+     "solve_min": 3.62,
+     "duration_min": 3.77,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 27,
+   "total_points": 800,
+   "hint_used": false,
+   "nominal_score": 800,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-12",
+   "name": "运营后台越权访问",
+   "attempts": [
+    {
+     "start_min": 167.43333333333334,
+     "fail_offsets": [],
+     "points": 800,
+     "solve_min": 4.45,
+     "duration_min": 4.82,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 28,
+   "total_points": 800,
+   "hint_used": false,
+   "nominal_score": 800,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-13",
+   "name": "用户中心水平越权",
+   "attempts": [
+    {
+     "start_min": 168.58333333333334,
+     "fail_offsets": [],
+     "points": 800,
+     "solve_min": 0.85,
+     "duration_min": 1.07,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 29,
+   "total_points": 800,
+   "hint_used": false,
+   "nominal_score": 800,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-14",
+   "name": "网络诊断命令注入",
+   "attempts": [
+    {
+     "start_min": 169.66666666666666,
+     "fail_offsets": [],
+     "points": 800,
+     "solve_min": 1.82,
+     "duration_min": 2.03,
+     "solved": true
+    }
+   ],
+   "hints": [],
+   "empirical_order": 30,
+   "total_points": 800,
+   "hint_used": false,
+   "nominal_score": 800,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-17",
+   "name": "边缘网关二次注入",
+   "attempts": [
+    {
+     "start_min": 171.9,
+     "fail_offsets": [],
+     "points": 720,
+     "solve_min": 18.82,
+     "duration_min": 19.15,
+     "solved": true
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 185.08,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 31,
+   "total_points": 720,
+   "hint_used": true,
+   "nominal_score": 800,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-18",
+   "name": "检查你的环境",
+   "attempts": [
+    {
+     "start_min": 172.26666666666668,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 35.32,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 206.55,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 32,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 600,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-35",
+   "name": "ColdByte 冷论坛",
+   "attempts": [
+    {
+     "start_min": 185.6,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 18.4,
+     "solved": false
+    }
+   ],
+   "hints": [],
+   "empirical_order": 33,
+   "total_points": 0,
+   "hint_used": false,
+   "nominal_score": 500,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-15",
+   "name": "报表导出命令注入绕过",
+   "attempts": [
+    {
+     "start_min": 191.05,
+     "fail_offsets": [],
+     "points": 765,
+     "solve_min": 34.08,
+     "duration_min": 34.63,
+     "solved": true
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 204.17,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 34,
+   "total_points": 765,
+   "hint_used": true,
+   "nominal_score": 850,
+   "score_estimated": false,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-01",
+   "name": "ATLAS 贸易合规控制台",
+   "attempts": [
+    {
+     "start_min": 204.2,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 29.48,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 205.62,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 35,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 600,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-24",
+   "name": "NexusPoint ToolShell",
+   "attempts": [
+    {
+     "start_min": 207.8,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 26.07,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 215.23,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 36,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 600,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-28",
+   "name": "NEXUS-7 Portal",
+   "attempts": [
+    {
+     "start_min": 225.88333333333333,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 7.98,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 235.8,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 37,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 600,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-25",
+   "name": "FOUNDRY Build Portal",
+   "attempts": [
+    {
+     "start_min": 234.16666666666666,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 51.0,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 254.82,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 38,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 700,
+   "score_estimated": true,
+   "flag_count": 1
+  },
+  {
+   "code": "bctf-08",
+   "name": "SENTINEL 威胁情报门户",
+   "attempts": [
+    {
+     "start_min": 243.06666666666666,
+     "fail_offsets": [],
+     "points": 0,
+     "solve_min": null,
+     "duration_min": 41.92,
+     "solved": false
+    }
+   ],
+   "hints": [
+    {
+     "at_min": 261.62,
+     "attempt_idx": 0
+    }
+   ],
+   "empirical_order": 39,
+   "total_points": 0,
+   "hint_used": true,
+   "nominal_score": 600,
+   "score_estimated": true,
+   "flag_count": 1
+  }
+ ]
+}

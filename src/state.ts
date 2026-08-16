@@ -60,6 +60,14 @@ export type ChallengeState = {
   internal_hosts: string[]
   /** 已兑换的 hint 文本（缓存，防止 compaction 后重复兑换重复扣分） */
   hint?: string
+  /** 累计尝试次数（跨 pass 递增，重试退避的依据） */
+  attempts: number
+  /** 累计占用 worker 的毫秒数（跨 attempt 累计，重试排序/预算退避的依据） */
+  busy_ms: number
+  /** 当前 attempt 内连续提交失败次数（提交熔断的依据，提交成功/重启时清零） */
+  submit_streak: number
+  /** 最近一次 journal 写下的下一步计划（跨 attempt 继承，修复重试时的传承断点） */
+  next_plan?: string
 }
 
 export type AlertRecord = {
@@ -135,6 +143,7 @@ export class StateStore {
       code, status: 'active', addr, description,
       flags_found: 0, flags_total: flagsTotal, score: 0,
       rounds: 0, no_progress: 0, findings: [], access: [], internal_hosts: [],
+      attempts: 1, busy_ms: 0, submit_streak: 0,
     }
     return this.save()
   }
@@ -153,9 +162,10 @@ export class StateStore {
     return this.save()
   }
 
-  /** 再次尝试(多 pass 调度):保留 findings/hint(题目知识仍然有效),
+  /** 再次尝试(多 pass 调度):保留 findings/hint/next_plan(题目知识仍然有效),
    *  清空 access/internal_hosts(旧容器已销毁,shell/拓扑失效),
-   *  按平台记录恢复 flags_found;rounds 总数跨 attempt 累计保留 */
+   *  按平台记录恢复 flags_found;rounds/busy_ms 跨 attempt 累计保留,attempts 递增,
+   *  submit_streak 清零(新容器新环境,熔断重新计数) */
   async reactivateChallenge(code: string, addr: string[], flagsFound: number, flagsTotal: number): Promise<void> {
     const ch = this.state.challenges[code]
     if (!ch) return this.startChallenge(code, addr, flagsTotal)
@@ -166,6 +176,8 @@ export class StateStore {
     ch.no_progress = 0
     ch.access = []
     ch.internal_hosts = []
+    ch.attempts += 1
+    ch.submit_streak = 0
     await this.save()
   }
 
@@ -176,6 +188,7 @@ export class StateStore {
     this.state.round += 1
     ch.rounds += 1
     ch.no_progress = rec.progress ? 0 : ch.no_progress + 1
+    if (rec.next_plan) ch.next_plan = rec.next_plan
     if (rec.finding && !ch.findings.includes(rec.finding)) ch.findings.push(rec.finding)
     if (rec.access && !ch.access.includes(rec.access)) ch.access.push(rec.access)
     if (rec.internal_hosts && !ch.internal_hosts.includes(rec.internal_hosts)) ch.internal_hosts.push(rec.internal_hosts)
@@ -197,8 +210,32 @@ export class StateStore {
     ch.flags_total = flagsTotal
     ch.score += awarded
     ch.no_progress = 0
+    ch.submit_streak = 0
     this.state.total_score += awarded
     if (flagsFound >= flagsTotal) ch.status = 'solved'
+    await this.save()
+  }
+
+  /** submit 失败计数(提交熔断的输入);返回当前连续失败次数 */
+  async recordSubmitFail(code: string): Promise<number> {
+    const ch = this.state.challenges[code]
+    if (!ch) return 0
+    ch.submit_streak += 1
+    await this.save()
+    return ch.submit_streak
+  }
+
+  /** 熔断重启容器后清零失败计数(新环境重新计数) */
+  async resetSubmitStreak(code: string): Promise<void> {
+    const ch = this.state.challenges[code]
+    if (ch) ch.submit_streak = 0
+    await this.save()
+  }
+
+  /** attempt 结束记账:累计 worker 占用(重试排序/预算退避的输入) */
+  async addBusyMs(code: string, ms: number): Promise<void> {
+    const ch = this.state.challenges[code]
+    if (ch) ch.busy_ms += ms
     await this.save()
   }
 
