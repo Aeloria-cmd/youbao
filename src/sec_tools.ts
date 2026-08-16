@@ -78,7 +78,7 @@ export function securityTools(
     description:
       '调用 TSec Benchmark 平台接口。参数：action（list/hint/submit）、unique_code（submit/hint 时必填）、flag（submit 时必填）。' +
       'submit 正确会自动记分并更新状态；返回附带 [state] 当前总分与剩余时间。' +
-      'hint 每题只能兑换一次（扣分），已兑换过的会直接返回缓存，不重复扣分。' +
+      'hint 每题只能兑换一次（扣分），已兑换过的会直接返回缓存，不重复扣分；只能兑换当前题目的提示。' +
       '容器生命周期（start/close）由调度器独占管理，模型不可用——需要刷新目标地址时用 list 查看 container_addr。',
     parameters: {
       type: 'object',
@@ -106,6 +106,16 @@ export function securityTools(
         if (err) return JSON.stringify({ ok: false, code: 'validation_error', message: err })
       }
 
+      // hint 门控:只允许兑换当前 worker 绑定题目的提示。
+      // 2026-08-16 正赛复盘:模型曾对已关闭/非当前题的 unique_code 兑 hint(平台按题号记账,
+      // 靶场已关闭的题兑了也无法转化,纯浪费 20 次中的 13 次)。
+      if (action === 'hint' && unique_code && unique_code !== journalCode) {
+        return JSON.stringify({
+          ok: false, code: 'not_allowed',
+          message: `hint 只能兑换当前题目(${journalCode})的提示;${unique_code} 不处于你的攻击面。若该题尚未轮到,等调度器排到你再兑换。`,
+        })
+      }
+
       // hint 缓存：每题只兑换一次。compaction 后模型不记得换过，直接调 API 会重复扣分
       if (action === 'hint' && unique_code) {
         const cached = store.state.challenges[unique_code]?.hint
@@ -126,6 +136,21 @@ export function securityTools(
         }
       }
 
+      // submit 失败 → 连续失败计数(提交熔断输入,runner 达阈值会重启容器)。
+      // duplicate/参数错误/网络错误是调用方问题,不算"环境异常"信号
+      let streakWarn = ''
+      if (action === 'submit' && unique_code) {
+        const wrong = result.ok
+          ? (result.data as { correct?: boolean }).correct === false
+          : !['duplicate', 'validation_error', 'network_error', 'internal_error'].includes(result.code)
+        if (wrong) {
+          const streak = await store.recordSubmitFail(unique_code)
+          if (streak >= 2) {
+            streakWarn = `\n⚠️ 已连续 ${streak} 次提交失败:停止猜测式提交——重新核对你的 flag 是否真的来自当前环境响应。连续失败将触发环境自动重启(旧 flag 作废)。`
+          }
+        }
+      }
+
       // hint 兑换成功 → 文本缓存进状态库（随 [state] 快照跨 compaction 存活）
       if (result.ok && action === 'hint' && unique_code) {
         const hintText = (result.data as { hint?: string | null }).hint ?? null
@@ -139,7 +164,7 @@ export function securityTools(
 
       const left = store.timeLeft()
       const stateLine = `[state] total_score=${store.state.total_score} time_left=${left === null ? 'n/a' : Math.max(0, Math.round(left / 60000)) + 'min'}`
-      return JSON.stringify(result, null, 2) + '\n' + stateLine
+      return JSON.stringify(result, null, 2) + streakWarn + '\n' + stateLine
     },
   }
 
